@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <title>PDF Gambar ke Teks (OCR Client-Side)</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 30px auto; padding: 20px; text-align: center; background: #f4f7f9; }
+        #drop-area { border: 2px dashed #ff9900; padding: 40px; margin: 20px 0; cursor: pointer; background: #fff8e1; transition: background 0.3s; }
+        #drop-area:hover, #drop-area.dragover { background: #ffe0b2; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; border-radius: 6px; border: none; font-weight: bold; }
+        #convert-btn { background: #dc3545; /* Merah untuk OCR (lebih intensif) */ color: white; transition: background 0.3s; }
+        #convert-btn:disabled { background: #ccc; cursor: not-allowed; }
+        #convert-btn:hover:not(:disabled) { background: #c82333; }
+        #status { margin-top: 15px; color: #dc3545; font-weight: bold; min-height: 20px; }
+        #output-area { margin-top: 30px; text-align: left; }
+        #output-text { width: 100%; height: 250px; border: 1px solid #ccc; padding: 15px; box-sizing: border-box; font-size: 14px; resize: vertical; }
+    </style>
+</head>
+<body>
+    <h1 style="color:#dc3545;">PDF Gambar ke Teks (OCR Super Canggih) 🤖</h1>
+    <p>Menggunakan **OCR** untuk mengekstrak teks dari PDF yang dipindai!</p>
+
+    <div id="drop-area">Seret file PDF ke sini</div>
+    <div>File terpilih: (<span id="filename">-</span>)</div>
+
+    <button id="convert-btn" disabled>Jalankan OCR ke Teks 🖼️</button>
+
+    <div id="status"></div>
+
+    <div id="output-area">
+        <h3>Hasil OCR (Salin & Tempel ke Word):</h3>
+        <textarea id="output-text" readonly placeholder="Teks hasil OCR akan muncul di sini..."></textarea>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js"></script>
+    <script src="https://unpkg.com/tesseract.js@5.0.0/dist/tesseract.min.js"></script>
+
+    <script>
+        // ... (Kode handleFile, dropArea, dll. sama seperti sebelumnya) ...
+        
+        let selectedFile = null;
+        
+        const dropArea = document.getElementById('drop-area');
+        const filenameSpan = document.getElementById('filename');
+        const convertBtn = document.getElementById('convert-btn');
+        const statusDiv = document.getElementById('status');
+        const outputTextarea = document.getElementById('output-text');
+
+        // File input setup (tetap sama)
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.pdf';
+        fileInput.style.display = 'none';
+        fileInput.onchange = e => { if (e.target.files[0]) handleFile(e.target.files[0]); };
+        document.body.appendChild(fileInput);
+
+        dropArea.addEventListener('click', () => fileInput.click());
+        dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('dragover'); });
+        dropArea.addEventListener('dragleave', () => dropArea.classList.remove('dragover'));
+        dropArea.addEventListener('drop', e => {
+            e.preventDefault();
+            dropArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                statusDiv.textContent = '❌ Pilih file PDF!';
+                convertBtn.disabled = true;
+                return;
+            }
+            selectedFile = file;
+            filenameSpan.textContent = file.name;
+            convertBtn.disabled = false;
+            statusDiv.textContent = '✅ File siap di-OCR.';
+            outputTextarea.value = '';
+        }
+
+        async function runOcrConversion() {
+            if (!selectedFile) return;
+
+            statusDiv.textContent = '⏳ Memuat Core OCR (Ini mungkin lambat untuk pertama kali)...';
+            convertBtn.disabled = true;
+            outputTextarea.value = '';
+
+            try {
+                const arrayBuf = await selectedFile.arrayBuffer();
+                const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
+                const totalPages = pdfDoc.numPages;
+                let fullText = '';
+                
+                // Inisialisasi Tesseract Worker
+                const worker = await Tesseract.createWorker('ind', 1, {
+                    // Tesseract akan menampilkan progresnya di console browser
+                });
+
+                for (let i = 1; i <= totalPages; i++) {
+                    // 1. Render PDF ke Canvas (Gambar)
+                    const page = await pdfDoc.getPage(i);
+                    const scale = 2; // DPI lebih tinggi untuk OCR yang lebih baik
+                    const viewport = page.getViewport({ scale: scale });
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    
+                    statusDiv.textContent = `⏳ Merender Halaman ${i}/${totalPages}...`;
+                    await page.render({ canvasContext: ctx, viewport }).promise;
+                    
+                    // 2. Lakukan OCR pada Gambar
+                    statusDiv.textContent = `⏳ OCR Halaman ${i}/${totalPages}. Jangan tutup browser!`;
+                    const { data: { text } } = await worker.recognize(canvas);
+
+                    // 3. Gabungkan Hasil
+                    fullText += text.trim() + '\n\n--- Halaman ' + i + ' ---\n\n';
+                }
+
+                await worker.terminate(); // Hentikan Worker setelah selesai
+
+                outputTextarea.value = fullText.trim();
+                statusDiv.textContent = `✅ Selesai! ${totalPages} halaman di-OCR. Salin teks ke Word.`;
+
+            } catch (error) {
+                statusDiv.textContent = `❌ Terjadi Kesalahan OCR: ${error.message}`;
+                console.error(error);
+            } finally {
+                convertBtn.disabled = false;
+            }
+        }
+
+        convertBtn.onclick = runOcrConversion;
+    </script>
+</body>
+</html>
