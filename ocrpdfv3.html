@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>OCR PDF dengan Binarisasi & DPI Pilihan</title>
+  <!-- PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js"></script>
+  <!-- Tesseract.js -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <style>
+    body { font-family: sans-serif; margin:20px; background:#f9f9f9; }
+    #progress { width:100%; background:#ddd; border-radius:10px; margin-top:10px; }
+    #progress-bar { height:20px; width:0%; background:#4caf50; border-radius:10px; text-align:center; color:#fff; }
+    textarea { width:100%; height:200px; margin-top:15px; }
+    button, select { margin:5px; padding:10px 15px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; }
+    #startBtn { background:#dc3545; color:white; }
+    #downloadBtn { background:#007bff; color:white; display:none; }
+  </style>
+</head>
+<body>
+  <h2>OCR PDF (DPI Tinggi + Binarisasi)</h2>
+  <input type="file" id="file" accept="application/pdf"><br>
+  
+  <label for="dpiSelect">Pilih DPI: </label>
+  <select id="dpiSelect">
+    <option value="1.0">1x (cepat, kualitas rendah)</option>
+    <option value="2.0" selected>2x (seimbang)</option>
+    <option value="3.0">3x (detail tinggi, lambat)</option>
+  </select><br>
+
+  <button id="startBtn">Mulai OCR</button>
+  <button id="downloadBtn">Download Hasil TXT</button>
+
+  <div id="progress"><div id="progress-bar">0%</div></div>
+  <textarea id="output" placeholder="Hasil OCR akan muncul di sini..."></textarea>
+
+  <script>
+    const progressBar = document.getElementById("progress-bar");
+    const output = document.getElementById("output");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const dpiSelect = document.getElementById("dpiSelect");
+
+    // Fungsi binarisasi (hitam-putih murni)
+    function binarizeCanvas(canvas) {
+      const ctx = canvas.getContext("2d");
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const brightness = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        const val = brightness < 128 ? 0 : 255;
+        data[i] = data[i + 1] = data[i + 2] = val;
+      }
+      ctx.putImageData(imageData, 0, 0);
+      return canvas;
+    }
+
+    document.getElementById("startBtn").addEventListener("click", async () => {
+      const file = document.getElementById("file").files[0];
+      if (!file) return alert("Pilih file PDF dulu ya sayang 🥰");
+
+      const scale = parseFloat(dpiSelect.value); // ambil DPI dari dropdown
+      const pdfData = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+      let fullText = "";
+      let completed = 0;
+
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        binarizeCanvas(canvas);
+
+        const result = await Tesseract.recognize(canvas, 'eng+ind', {
+          logger: (m) => console.log(m)
+        });
+
+        fullText += `\n\n=== Halaman ${pageNum} ===\n` + result.data.text;
+
+        completed++;
+        let percent = Math.round((completed / pdf.numPages) * 100);
+        progressBar.style.width = percent + "%";
+        progressBar.textContent = percent + "%";
+      }
+
+      output.value = fullText;
+      downloadBtn.style.display = "inline-block";
+
+      downloadBtn.onclick = () => {
+        const blob = new Blob([fullText], { type: "text/plain" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = file.name.replace(/\.pdf$/i, "") + "_OCR.txt";
+        link.click();
+      };
+    });
+  </script>
+</body>
+</html>
