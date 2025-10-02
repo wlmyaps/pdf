@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <title>PDF ke Teks Terstruktur (Simulasi Word)</title>
+    <style>
+        /* CSS Disederhanakan untuk Fokus pada Fungsi */
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 30px auto; padding: 20px; text-align: center; background: #f4f7f9; }
+        #drop-area { border: 2px dashed #ff9900; padding: 40px; margin: 20px 0; cursor: pointer; background: #fff8e1; transition: background 0.3s; }
+        #drop-area:hover, #drop-area.dragover { background: #ffe0b2; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; border-radius: 6px; border: none; font-weight: bold; }
+        #convert-btn { background: #007bff; color: white; transition: background 0.3s; }
+        #convert-btn:disabled { background: #ccc; cursor: not-allowed; }
+        #convert-btn:hover:not(:disabled) { background: #0056b3; }
+        #status { margin-top: 15px; color: #007bff; font-weight: bold; min-height: 20px; }
+        #output-area { margin-top: 30px; text-align: left; }
+        #output-text { width: 100%; height: 250px; border: 1px solid #ccc; padding: 15px; box-sizing: border-box; font-size: 14px; resize: vertical; }
+    </style>
+</head>
+<body>
+    <h1 style="color:#007bff;">PDF ke Teks Terstruktur (Simulasi Edit) 🧠</h1>
+    <p>Ini adalah teknik *client-side* terbaik untuk mendapatkan teks yang dapat diedit tanpa API Key.</p>
+
+    <div id="drop-area">Seret file PDF ke sini</div>
+    <div>File terpilih: (<span id="filename">-</span>)</div>
+
+    <button id="convert-btn" disabled>Ekstrak Teks untuk Word 📄</button>
+
+    <div id="status"></div>
+
+    <div id="output-area">
+        <h3>Hasil Teks (Salin & Tempel ke Word):</h3>
+        <textarea id="output-text" readonly placeholder="Teks hasil ekstraksi akan muncul di sini..."></textarea>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js"></script>
+
+    <script>
+        let selectedFile = null;
+        
+        const dropArea = document.getElementById('drop-area');
+        const filenameSpan = document.getElementById('filename');
+        const convertBtn = document.getElementById('convert-btn');
+        const statusDiv = document.getElementById('status');
+        const outputTextarea = document.getElementById('output-text');
+
+        // File input setup
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.pdf';
+        fileInput.style.display = 'none';
+        fileInput.onchange = e => { if (e.target.files[0]) handleFile(e.target.files[0]); };
+        document.body.appendChild(fileInput);
+
+        dropArea.addEventListener('click', () => fileInput.click());
+        dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('dragover'); });
+        dropArea.addEventListener('dragleave', () => dropArea.classList.remove('dragover'));
+        dropArea.addEventListener('drop', e => {
+            e.preventDefault();
+            dropArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                statusDiv.textContent = '❌ Pilih file PDF!';
+                convertBtn.disabled = true;
+                return;
+            }
+            selectedFile = file;
+            filenameSpan.textContent = file.name;
+            convertBtn.disabled = false;
+            statusDiv.textContent = '✅ File siap diekstrak.';
+            outputTextarea.value = '';
+        }
+
+        async function convertToEditableText() {
+            if (!selectedFile) return;
+
+            statusDiv.textContent = '⏳ Mengekstrak teks terstruktur...';
+            convertBtn.disabled = true;
+            outputTextarea.value = '';
+
+            try {
+                const arrayBuf = await selectedFile.arrayBuffer();
+                const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
+                const totalPages = pdfDoc.numPages;
+                let fullText = '';
+                
+                // Iterasi setiap halaman
+                for (let i = 1; i <= totalPages; i++) {
+                    const page = await pdfDoc.getPage(i);
+                    const textContent = await page.getTextContent();
+                    
+                    // Menggabungkan teks dari berbagai item dalam halaman
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    
+                    // Tambahkan pemisah baris/halaman untuk struktur
+                    fullText += pageText.trim() + '\n\n--- Halaman ' + i + ' ---\n\n';
+                }
+
+                outputTextarea.value = fullText.trim();
+                statusDiv.textContent = `✅ Selesai! ${totalPages} halaman telah diekstrak. Salin teks di bawah dan tempel ke Word.`;
+
+            } catch (error) {
+                statusDiv.textContent = `❌ Terjadi Kesalahan Ekstraksi: ${error.message}`;
+                console.error(error);
+            } finally {
+                convertBtn.disabled = false;
+            }
+        }
+
+        convertBtn.onclick = convertToEditableText;
+    </script>
+</body>
+</html>
