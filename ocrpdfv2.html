@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>OCR PDF Kustom: DPI & Binarisasi</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 30px auto; padding: 20px; text-align: center; background: #f4f7f9; }
+        h2 { color: #0056b3; }
+        #drop-area { border: 2px dashed #007bff; padding: 40px; margin: 20px 0; cursor: pointer; background: #e9f0ff; }
+        #drop-area:hover { background: #d0e0ff; }
+        
+        .group { margin: 15px 0; padding: 10px; border: 1px solid #ccc; border-radius: 8px; background: #fff; }
+        .dpi-btn { padding: 10px 15px; margin: 5px; border: 1px solid #aaa; background: #f0f0f0; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+        .dpi-btn.active { background: #007bff; color: white; border-color: #0056b3; font-weight: bold; }
+        
+        button { margin: 10px; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        #startBtn { background: #dc3545; color: white; }
+        #downloadBtn { background: #28a745; color: white; display: none; }
+        
+        #progress { width: 100%; background: #ddd; border-radius: 10px; margin-top: 15px; }
+        #progress-bar { height: 25px; width: 0%; background: #007bff; border-radius: 10px; text-align: center; color: #fff; line-height: 25px; transition: width 0.3s; }
+        textarea { width: 100%; height: 250px; margin-top: 20px; padding: 10px; border: 1px solid #ccc; box-sizing: border-box; }
+        #status { color: #dc3545; font-weight: bold; min-height: 20px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h2>OCR PDF Kustom (Tesseract + Binarisasi)</h2>
+    
+    <div id="drop-area">Klik atau seret file PDF ke sini</div>
+    <div id="filename-display">File terpilih: (<span id="filename">-</span>)</div>
+
+    <div class="group">
+        <h3>Pilih Kualitas Render (DPI):</h3>
+        <button class="dpi-btn" data-scale="1.0">1x (Rendah & Cepat)</button>
+        <button class="dpi-btn active" data-scale="2.0">2x (Normal & Baik)</button>
+        <button class="dpi-btn" data-scale="3.0">3x (Tinggi & Akurat)</button>
+    </div>
+
+    <button id="startBtn" disabled>Mulai OCR</button>
+    <button id="downloadBtn">Download Hasil TXT</button>
+    
+    <div id="status">Pilih file PDF untuk memulai.</div>
+    <div id="progress"><div id="progress-bar">0%</div></div>
+    <textarea id="output" placeholder="Hasil OCR akan muncul di sini..."></textarea>
+
+    <script>
+        // Variabel Global
+        let selectedFile = null;
+        let selectedScale = 2.0; // Default 2.0x
+
+        // Elemen DOM
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'application/pdf';
+        fileInput.style.display = 'none';
+        document.body.appendChild(fileInput);
+
+        const dropArea = document.getElementById('drop-area');
+        const filenameSpan = document.getElementById('filename');
+        const startBtn = document.getElementById('startBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const progressBar = document.getElementById("progress-bar");
+        const output = document.getElementById("output");
+        const statusDiv = document.getElementById("status");
+
+        // --- 1. SETUP UI DAN FILE INPUT ---
+        
+        // Handle File Selection
+        function handleFile(file) {
+            if (!file || !file.name.toLowerCase().endsWith('.pdf')) {
+                statusDiv.textContent = '❌ Pilih file PDF yang valid!';
+                startBtn.disabled = true;
+                return;
+            }
+            selectedFile = file;
+            filenameSpan.textContent = file.name;
+            startBtn.disabled = false;
+            statusDiv.textContent = '✅ File siap. Pilih DPI dan tekan Mulai.';
+            output.value = '';
+            downloadBtn.style.display = "none";
+            progressBar.style.width = "0%";
+            progressBar.textContent = "0%";
+        }
+
+        fileInput.onchange = e => handleFile(e.target.files[0]);
+        dropArea.addEventListener('click', () => fileInput.click());
+        
+        // Handle Drag & Drop
+        dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('hover'); });
+        dropArea.addEventListener('dragleave', () => dropArea.classList.remove('hover'));
+        dropArea.addEventListener('drop', e => {
+            e.preventDefault();
+            dropArea.classList.remove('hover');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+
+        // Handle DPI Selection
+        document.querySelectorAll('.dpi-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.dpi-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedScale = parseFloat(btn.dataset.scale);
+                statusDiv.textContent = `DPI diatur ke ${selectedScale}x. Siap untuk OCR.`;
+            });
+        });
+
+        // --- 2. FUNGSI PRA-PEMROSESAN & OCR ---
+
+        // Fungsi binarisasi yang ditingkatkan (persis seperti versi Anda)
+        function binarizeCanvas(canvas) {
+            const ctx = canvas.getContext("2d");
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            // Gunakan nilai ambang batas yang sedikit lebih agresif untuk gambar pindaian
+            const threshold = 140; 
+            for (let i = 0; i < data.length; i += 4) {
+                // Hitung Luminositas
+                const brightness = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+                
+                // Terapkan Binarisasi (Hitam atau Putih)
+                const val = brightness < threshold ? 0 : 255;
+                data[i] = data[i + 1] = data[i + 2] = val; 
+            }
+            ctx.putImageData(imageData, 0, 0);
+            return canvas;
+        }
+
+        // Fungsi Utama OCR
+        startBtn.addEventListener("click", async () => {
+            if (!selectedFile) return;
+
+            startBtn.disabled = true;
+            downloadBtn.style.display = "none";
+            output.value = "";
+            
+            try {
+                const pdfData = await selectedFile.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+                let fullText = "";
+                let completed = 0;
+
+                // Buat Worker Tesseract di luar loop halaman
+                const worker = await Tesseract.createWorker('eng+ind', 1, {
+                    logger: (m) => {
+                        if (m.status === 'recognizing text') {
+                            // Update status lebih detail selama proses OCR
+                            statusDiv.textContent = `⏳ Halaman ${completed + 1}/${pdf.numPages}: ${Math.round(m.progress * 100)}% (${m.status})`;
+                        }
+                    }
+                });
+
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                    const page = await pdf.getPage(pageNum);
+                    
+                    // Gunakan selectedScale dari tombol DPI
+                    const scale = selectedScale; 
+                    const viewport = page.getViewport({ scale });
+                    const canvas = document.createElement("canvas");
+                    const ctx = canvas.getContext("2d");
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+
+                    // 1. Render Halaman
+                    statusDiv.textContent = `⏳ Merender Halaman ${pageNum}/${pdf.numPages} (${scale}x)...`;
+                    await page.render({ canvasContext: ctx, viewport }).promise;
+
+                    // 2. Binarisasi
+                    binarizeCanvas(canvas);
+
+                    // 3. OCR
+                    const result = await worker.recognize(canvas);
+
+                    fullText += `\n\n=== Halaman ${pageNum} (DPI ${scale}x) ===\n` + result.data.text;
+
+                    // Update progress bar
+                    completed++;
+                    let percent = Math.round((completed / pdf.numPages) * 100);
+                    progressBar.style.width = percent + "%";
+                    progressBar.textContent = percent + "%";
+                }
+                
+                await worker.terminate(); // Hentikan Worker
+                
+                output.value = fullText;
+                downloadBtn.style.display = "inline-block";
+                statusDiv.textContent = `✅ Konversi selesai! ${pdf.numPages} halaman berhasil di-OCR.`;
+
+            } catch (error) {
+                statusDiv.textContent = `❌ Terjadi Kesalahan: ${error.message}. Cek Console log.`;
+                console.error(error);
+            } finally {
+                startBtn.disabled = false;
+            }
+        });
+
+        // --- 3. FUNGSI DOWNLOAD TXT ---
+
+        downloadBtn.onclick = () => {
+            if (!output.value) return;
+            const blob = new Blob([output.value], { type: "text/plain;charset=utf-8" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = selectedFile.name.replace(/\.pdf$/i, "") + `_OCR_${selectedScale}x.txt`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        };
+    </script>
+</body>
+</html>
