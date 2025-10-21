@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HP Comparison — Versi GPT-5 Thinking mini (Menawan)</title>
+  <style>
+    :root{
+      --bg1:#0f172a; /* dark navy */
+      --accent1:#7c3aed; /* purple */
+      --accent2:#06b6d4; /* teal */
+      --card:#0b1220;
+      --glass: rgba(255,255,255,0.06);
+      --glass-2: rgba(255,255,255,0.03);
+      --glass-border: rgba(255,255,255,0.06);
+      color-scheme: dark;
+    }
+    html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background: radial-gradient(1200px 600px at 10% 10%, rgba(124,58,237,0.12), transparent), radial-gradient(900px 400px at 90% 90%, rgba(6,182,212,0.08), transparent), var(--bg1);}
+    .wrap{max-width:1200px;margin:32px auto;padding:28px;}
+
+    header{display:flex;gap:16px;align-items:center;}
+    .logo{width:64px;height:64px;border-radius:14px;background:linear-gradient(135deg,var(--accent1),var(--accent2));display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:20px;box-shadow:0 8px 30px rgba(12,12,20,0.6);}
+    h1{color:#fff;font-size:1.6rem;margin:0}
+    p.lead{color:rgba(255,255,255,0.7);margin-top:6px}
+
+    /* hero */
+    .hero{display:grid;grid-template-columns:1fr 420px;gap:24px;margin-top:22px;align-items:center}
+    .panel{background:linear-gradient(180deg, var(--card), rgba(255,255,255,0.02));border-radius:14px;padding:18px;border:1px solid var(--glass-border);backdrop-filter:blur(6px);}
+
+    /* animated phone stage */
+    .stage{height:420px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+
+    /* floating & rotating subtle rings */
+    .ring{position:absolute;border-radius:50%;filter:blur(40px);opacity:0.12}
+    .ring.one{width:420px;height:420px;left:-60px;top:-40px;background:linear-gradient(90deg,var(--accent1),transparent)}
+    .ring.two{width:280px;height:280px;right:-20px;bottom:-40px;background:linear-gradient(90deg,var(--accent2),transparent)}
+
+    /* phone mockups */
+    .phone-carousel{display:flex;gap:22px;align-items:center;transform-style:preserve-3d;perspective:1200px}
+    .phone{width:200px;height:420px;border-radius:34px;background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));box-shadow:0 24px 60px rgba(2,6,23,0.6);position:relative;border:1px solid rgba(255,255,255,0.04);overflow:hidden;display:flex;flex-direction:column}
+    .phone::after{content:'';position:absolute;left:50%;top:8px;transform:translateX(-50%);width:50px;height:6px;border-radius:3px;background:rgba(255,255,255,0.06)}
+    .screen{flex:1;padding:18px;display:flex;flex-direction:column;gap:8px}
+    .notch{height:6px}
+
+    /* subtle animation for phones */
+    @keyframes floaty{0%{transform:translateY(0) rotateY(-8deg) translateZ(0)}50%{transform:translateY(-12px) rotateY(8deg) translateZ(12px)}100%{transform:translateY(0) rotateY(-8deg) translateZ(0)}}
+    .phone{animation:floaty 5s ease-in-out infinite}
+
+    .phone .mock-app{height:56px;background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:8px;color:rgba(255,255,255,0.9);font-weight:600;display:flex;align-items:center;gap:10px}
+    .mock-screen{flex:1;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.03));border-radius:12px;padding:12px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.85);font-weight:700}
+
+    /* carousel controls */
+    .controls{display:flex;gap:10px;justify-content:center;margin-top:14px}
+    .dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.12);cursor:pointer}
+    .dot.active{background:linear-gradient(90deg,var(--accent1),var(--accent2));box-shadow:0 6px 20px rgba(124,58,237,0.18)}
+
+    /* ai-cards */
+    .ai-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+    .ai-card{padding:14px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);border:1px solid rgba(255,255,255,0.04);transition:transform .25s, box-shadow .25s}
+    .ai-card:hover{transform:translateY(-8px);box-shadow:0 30px 60px rgba(2,6,23,0.6)}
+    .ai-title{display:flex;align-items:center;gap:12px}
+    .ai-badge{width:40px;height:40px;border-radius:8px;background:linear-gradient(90deg,var(--accent1),var(--accent2));color:white;display:flex;align-items:center;justify-content:center;font-weight:700}
+    .ranking{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+    .rank-item{display:flex;align-items:center;gap:12px}
+    .rank-num{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;font-weight:700}
+
+    /* insight box */
+    .insight{margin-top:18px;padding:12px;border-radius:10px;background:linear-gradient(90deg, rgba(124,58,237,0.08), rgba(6,182,212,0.04));color:#e6f7ff}
+
+    footer{margin-top:26px;color:rgba(255,255,255,0.6);font-size:13px}
+
+    /* responsive */
+    @media (max-width:980px){.hero{grid-template-columns:1fr}.ai-grid{grid-template-columns:1fr}.phone-carousel{transform:scale(.86)}}
+
+    /* small sparkle animation */
+    .sparkle{position:absolute;right:18px;top:18px;width:10px;height:10px;background:linear-gradient(90deg,#fff,#ffd966);border-radius:50%;filter:blur(6px);opacity:0.9;animation:blink 2s infinite}
+    @keyframes blink{0%{opacity:.1;transform:scale(.7)}50%{opacity:1;transform:scale(1.4)}100%{opacity:.1;transform:scale(.7)}}
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">HP</div>
+      <div>
+        <h1>HP Comparison — Versi Menawan</h1>
+        <p class="lead">Ringkasan 5 AI + visual interaktif. Animasi mockup HP dan kartu rekomendasi.</p>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="panel">
+        <h3 style="color:#fff;margin:0 0 8px 0">Konsensus singkat</h3>
+        <p style="color:rgba(255,255,255,0.8)">Xiaomi/POCO konsisten jadi juara value-for-money; iQOO & Realme kuat di performa; Samsung unggul di update & after-sales.</p>
+
+        <div style="margin-top:18px" class="ai-grid">
+          <div class="ai-card">
+            <div class="ai-title"><div class="ai-badge">G</div><div><strong>Gemini</strong><div style="font-size:12px;color:rgba(255,255,255,0.6)">Fokus: price-to-performance</div></div></div>
+            <div class="ranking">
+              <div class="rank-item"><div class="rank-num">1</div><div>POCO (Xiaomi)</div></div>
+              <div class="rank-item"><div class="rank-num">2</div><div>Xiaomi</div></div>
+              <div class="rank-item"><div class="rank-num">3</div><div>Infinix</div></div>
+              <div class="rank-item"><div class="rank-num">4</div><div>Realme</div></div>
+              <div class="rank-item"><div class="rank-num">5</div><div>Vivo</div></div>
+            </div>
+          </div>
+
+          <div class="ai-card">
+            <div class="ai-title"><div class="ai-badge">C</div><div><strong>Copilot</strong><div style="font-size:12px;color:rgba(255,255,255,0.6)">Praktis — model rekomendasi</div></div></div>
+            <div class="ranking">
+              <div class="rank-item"><div class="rank-num">1</div><div>POCO X7 Pro</div></div>
+              <div class="rank-item"><div class="rank-num">2</div><div>Realme 13 Pro+</div></div>
+              <div class="rank-item"><div class="rank-num">3</div><div>Samsung A56</div></div>
+              <div class="rank-item"><div class="rank-num">4</div><div>Honor X60 GT</div></div>
+              <div class="rank-item"><div class="rank-num">5</div><div>Vivo V30e</div></div>
+            </div>
+          </div>
+
+          <div class="ai-card">
+            <div class="ai-title"><div class="ai-badge">Q</div><div><strong>Qwen</strong><div style="font-size:12px;color:rgba(255,255,255,0.6)">Detail & benchmark-aware</div></div></div>
+            <div class="ranking">
+              <div class="rank-item"><div class="rank-num">1</div><div>iQOO</div></div>
+              <div class="rank-item"><div class="rank-num">2</div><div>Xiaomi</div></div>
+              <div class="rank-item"><div class="rank-num">3</div><div>OnePlus</div></div>
+              <div class="rank-item"><div class="rank-num">4</div><div>Samsung</div></div>
+              <div class="rank-item"><div class="rank-num">5</div><div>Apple</div></div>
+            </div>
+          </div>
+
+          <div class="ai-card">
+            <div class="ai-title"><div class="ai-badge">D</div><div><strong>DeepSeek</strong><div style="font-size:12px;color:rgba(255,255,255,0.6)">Naratif komprehensif</div></div></div>
+            <div class="ranking">
+              <div class="rank-item"><div class="rank-num">1</div><div>Xiaomi</div></div>
+              <div class="rank-item"><div class="rank-num">2</div><div>Realme</div></div>
+              <div class="rank-item"><div class="rank-num">3</div><div>Samsung</div></div>
+              <div class="rank-item"><div class="rank-num">4</div><div>Tecno/Infinix</div></div>
+              <div class="rank-item"><div class="rank-num">5</div><div>OPPO/Vivo</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="insight">Verdict singkat: <strong>Xiaomi/POCO</strong> juara value; <strong>iQOO</strong> & <strong>Realme</strong> kuat untuk performa; <strong>Samsung</strong> juara keandalan & update.</div>
+
+      </div>
+
+      <div class="panel stage">
+        <div class="ring one"></div>
+        <div class="ring two"></div>
+        <div class="phone-carousel" id="carousel">
+          <div class="phone" data-title="POCO F6">
+            <div class="screen">
+              <div class="mock-app">POCO F6 — Flagship Killer</div>
+              <div class="mock-screen">Snapdragon / AMOLED / 120Hz</div>
+            </div>
+          </div>
+
+          <div class="phone" data-title="iQOO 12">
+            <div class="screen">
+              <div class="mock-app">iQOO 12 — Performance</div>
+              <div class="mock-screen">VC Cooling / 16GB LPDDR5X</div>
+            </div>
+          </div>
+
+          <div class="phone" data-title="Samsung A56">
+            <div class="screen">
+              <div class="mock-app">Samsung A56 — Reliable</div>
+              <div class="mock-screen">AMOLED / Long Updates</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls" id="dots"></div>
+        <div class="sparkle"></div>
+      </div>
+    </section>
+
+    <footer>Butuh tambahkan video background atau gambar animasi HP sungguhan? Saya bisa sisipkan link video (file .mp4) atau image sprite — beri tahu file/URL yang mau dipakai.</footer>
+  </div>
+
+  <script>
+    // simple carousel state
+    const phones = Array.from(document.querySelectorAll('.phone'));
+    const dots = document.getElementById('dots');
+    let idx = 0;
+
+    function render(){
+      phones.forEach((p,i)=>{
+        const offset = i - idx;
+        const z = 100 - Math.abs(offset) * 20;
+        p.style.transform = `translateX(${offset * 240}px) translateZ(${ -Math.abs(offset) * 60 }px) scale(${1 - Math.abs(offset) * 0.12})`;
+        p.style.opacity = (Math.abs(offset) > 2)? 0 : 1;
+        p.style.zIndex = z;
+      });
+      // dots
+      dots.innerHTML = '';
+      phones.forEach((_,i)=>{
+        const d = document.createElement('div'); d.className = 'dot' + (i===idx? ' active':''); d.onclick = ()=>{ idx = i; render(); }
+        dots.appendChild(d);
+      });
+    }
+    render();
+
+    // auto-cycle
+    setInterval(()=>{ idx = (idx + 1) % phones.length; render(); }, 3200);
+  </script>
+</body>
+</html>
