@@ -1,7 +1,7 @@
 let currentBuffer = null;
+let currentSampleRate = 44100;
 const recorder = new AudioRecorder();
-const sampleRate = 44100;
-let audioCtx = null;
+let globalAudioCtx = null;
 let sourceNode = null;
 let isPlaying = false;
 
@@ -23,22 +23,23 @@ const frequencies = [
 const eqBandsContainer = document.getElementById('eq-bands');
 const bandGains = frequencies.map(() => 0);
 
-// Clear container before populating
-eqBandsContainer.innerHTML = '';
-frequencies.forEach((f, i) => {
-    const div = document.createElement('div');
-    div.className = 'eq-band';
-    div.innerHTML = `
-        <input type="range" min="-12" max="12" value="0" step="1" data-index="${i}">
-        <label>${f < 1000 ? f : (f/1000)+'k'}</label>
-    `;
-    div.querySelector('input').oninput = (e) => {
-        bandGains[i] = parseFloat(e.target.value);
-    };
-    eqBandsContainer.appendChild(div);
-});
+function initUI() {
+    eqBandsContainer.innerHTML = '';
+    frequencies.forEach((f, i) => {
+        const div = document.createElement('div');
+        div.className = 'eq-band';
+        div.innerHTML = `
+            <input type="range" min="-12" max="12" value="0" step="1" data-index="${i}">
+            <label>${f < 1000 ? f : (f/1000)+'k'}</label>
+        `;
+        div.querySelector('input').oninput = (e) => {
+            bandGains[i] = parseFloat(e.target.value);
+        };
+        eqBandsContainer.appendChild(div);
+    });
+    updateUI();
+}
 
-// Helper to update button states
 function updateUI() {
     playBtn.disabled = !currentBuffer;
     saveBtn.disabled = !currentBuffer;
@@ -46,16 +47,23 @@ function updateUI() {
     playBtn.style.background = isPlaying ? '#f44336' : '#4CAF50';
 }
 
-// Main Controls
+function getAudioCtx() {
+    if (!globalAudioCtx) {
+        globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return globalAudioCtx;
+}
+
 recordBtn.onclick = async () => {
     try {
         await recorder.start();
+        currentSampleRate = 44100; // Recording is fixed at 44.1k in this app
         recordBtn.disabled = true;
         stopBtn.disabled = false;
         recordBtn.innerText = 'Recording...';
         recordBtn.classList.add('active');
     } catch (err) {
-        alert("Error accessing microphone: " + err);
+        alert("Error: " + err.message);
     }
 };
 
@@ -70,32 +78,27 @@ stopBtn.onclick = () => {
 };
 
 playBtn.onclick = () => {
-    if (isPlaying) {
-        stopPlayback();
-        return;
-    }
-    startPlayback();
+    if (isPlaying) stopPlayback();
+    else startPlayback();
 };
 
-function startPlayback() {
+async function startPlayback() {
     if (!currentBuffer) return;
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
-    // Always resume context if suspended (browser policy)
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') await ctx.resume();
 
-    const buffer = audioCtx.createBuffer(1, currentBuffer.length, sampleRate);
+    const buffer = ctx.createBuffer(1, currentBuffer.length, currentSampleRate);
     buffer.copyToChannel(currentBuffer, 0);
     
-    sourceNode = audioCtx.createBufferSource();
+    sourceNode = ctx.createBufferSource();
     sourceNode.buffer = buffer;
     
-    const gainNode = audioCtx.createGain();
+    const gainNode = ctx.createGain();
     gainNode.gain.value = parseFloat(document.getElementById('gainSlider').value);
     sourceNode.playbackRate.value = parseFloat(document.getElementById('rateSlider').value);
     
     sourceNode.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
+    gainNode.connect(ctx.destination);
     
     sourceNode.onended = () => {
         isPlaying = false;
@@ -109,7 +112,7 @@ function startPlayback() {
 
 function stopPlayback() {
     if (sourceNode) {
-        sourceNode.stop();
+        try { sourceNode.stop(); } catch(e) {}
         sourceNode = null;
     }
     isPlaying = false;
@@ -122,71 +125,63 @@ loadFile.onchange = async (e) => {
     if (!file) return;
     
     const arrayBuffer = await file.arrayBuffer();
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = getAudioCtx();
     
     try {
-        const decoded = await audioCtx.decodeAudioData(arrayBuffer);
-        // Convert to mono for this simple editor if stereo
+        const decoded = await ctx.decodeAudioData(arrayBuffer);
         currentBuffer = decoded.getChannelData(0);
+        currentSampleRate = decoded.sampleRate; // Store original sample rate
         updateUI();
         drawBuffer();
     } catch (err) {
-        alert("Error decoding audio: " + err);
+        alert("Decode error: " + err.message);
     }
 };
 
 saveBtn.onclick = () => {
     if (!currentBuffer) return;
-    const blob = AudioRecorder.encodeMP3(currentBuffer);
+    const blob = AudioRecorder.encodeMP3(currentBuffer, currentSampleRate);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'edited_audio.mp3';
+    a.download = 'web_audio_pro_v4.mp3';
     a.click();
 };
 
-// Effects Wiring
 const applyEffect = async (fn, ...args) => {
     if (!currentBuffer) return;
-    const originalBtnText = event.target.innerText;
-    event.target.innerText = 'Processing...';
-    event.target.disabled = true;
+    const target = event.target;
+    const originalText = target.innerText;
+    target.innerText = 'Wait...';
+    target.disabled = true;
 
     try {
-        // Stop playback before applying effects to avoid context issues
         if (isPlaying) stopPlayback();
-        
+        // Always pass currentSampleRate to ensure pitch stability
         currentBuffer = await fn(currentBuffer, ...args);
         drawBuffer();
     } catch (err) {
         console.error(err);
         alert("Effect failed: " + err.message);
     } finally {
-        event.target.innerText = originalBtnText;
-        event.target.disabled = false;
+        target.innerText = originalText;
+        target.disabled = false;
+        updateUI();
     }
 };
 
-document.getElementById('fadeInBtn').onclick = (e) => applyEffect(AudioEffects.fadeIn, 2, sampleRate);
-document.getElementById('fadeOutBtn').onclick = (e) => applyEffect(AudioEffects.fadeOut, 2, sampleRate);
-document.getElementById('normalizeBtn').onclick = (e) => applyEffect(AudioEffects.normalize);
-document.getElementById('reverseBtn').onclick = (e) => applyEffect(AudioEffects.reverse);
-document.getElementById('invertBtn').onclick = (e) => applyEffect(AudioEffects.invert);
-document.getElementById('removeSilenceBtn').onclick = (e) => applyEffect(AudioEffects.removeSilence, 0.01);
-document.getElementById('compressorBtn').onclick = (e) => applyEffect(AudioEffects.applyCompressor, sampleRate);
-document.getElementById('reverbBtn').onclick = (e) => applyEffect(AudioEffects.applyReverb, sampleRate);
-document.getElementById('delayBtn').onclick = (e) => applyEffect(AudioEffects.applyDelay, sampleRate);
-document.getElementById('distortionBtn').onclick = (e) => applyEffect(AudioEffects.applyDistortion, sampleRate);
-
-document.getElementById('limiterBtn').onclick = (e) => applyEffect(async (buf) => {
-    const out = new Float32Array(buf.length);
-    for(let i=0; i<buf.length; i++) {
-        out[i] = Math.max(-0.8, Math.min(0.8, buf[i]));
-    }
-    return out;
-});
-
-document.getElementById('noiseRedBtn').onclick = (e) => applyEffect(async (buf) => {
+document.getElementById('fadeInBtn').onclick = () => applyEffect(AudioEffects.fadeIn, 2, currentSampleRate);
+document.getElementById('fadeOutBtn').onclick = () => applyEffect(AudioEffects.fadeOut, 2, currentSampleRate);
+document.getElementById('normalizeBtn').onclick = () => applyEffect(AudioEffects.normalize);
+document.getElementById('reverseBtn').onclick = () => applyEffect(AudioEffects.reverse);
+document.getElementById('invertBtn').onclick = () => applyEffect(AudioEffects.invert);
+document.getElementById('removeSilenceBtn').onclick = () => applyEffect(AudioEffects.removeSilence, 0.01);
+document.getElementById('compressorBtn').onclick = () => applyEffect(AudioEffects.applyCompressor, currentSampleRate);
+document.getElementById('reverbBtn').onclick = () => applyEffect(AudioEffects.applyReverb, currentSampleRate);
+document.getElementById('delayBtn').onclick = () => applyEffect(AudioEffects.applyDelay, currentSampleRate);
+document.getElementById('distortionBtn').onclick = () => applyEffect(AudioEffects.applyDistortion, currentSampleRate);
+document.getElementById('limiterBtn').onclick = () => applyEffect(AudioEffects.applyLimiter);
+document.getElementById('noiseRedBtn').onclick = () => applyEffect(async (buf) => {
     const out = new Float32Array(buf.length);
     const threshold = 0.02;
     for(let i=0; i<buf.length; i++) {
@@ -195,18 +190,17 @@ document.getElementById('noiseRedBtn').onclick = (e) => applyEffect(async (buf) 
     return out;
 });
 
-// EQ Apply
 const eqBtn = document.createElement('button');
 eqBtn.innerText = 'Apply EQ';
 eqBtn.className = 'btn-fx full-width';
 eqBtn.style.marginTop = '10px';
-eqBtn.onclick = (e) => {
+eqBtn.onclick = () => {
     const bands = frequencies.map((f, i) => ({ f, g: bandGains[i] }));
-    applyEffect(AudioEffects.applyEQ, sampleRate, bands);
+    applyEffect(AudioEffects.applyEQ, currentSampleRate, bands);
 };
 document.querySelector('.eq-container').appendChild(eqBtn);
 
-// Visualization
+// Optimized Visualization with Downsampling
 function drawBuffer() {
     if (!currentBuffer) {
         canvasCtx.fillStyle = '#000';
@@ -223,11 +217,18 @@ function drawBuffer() {
     
     const step = Math.ceil(currentBuffer.length / width);
     const amp = height / 2;
+    
+    // Aggressive downsampling for UI smoothness
     for (let i = 0; i < width; i++) {
         let min = 1.0;
         let max = -1.0;
-        for (let j = 0; j < step; j++) {
-            const datum = currentBuffer[(i * step) + j];
+        const start = i * step;
+        const end = Math.min(start + step, currentBuffer.length);
+        
+        // If chunk is too large, skip samples inside the chunk for speed
+        const skip = Math.max(1, Math.floor(step / 100)); 
+        for (let j = start; j < end; j += skip) {
+            const datum = currentBuffer[j];
             if (datum < min) min = datum;
             if (datum > max) max = datum;
         }
@@ -237,7 +238,6 @@ function drawBuffer() {
     canvasCtx.stroke();
 }
 
-// Initial UI State
-updateUI();
+initUI();
 window.onresize = drawBuffer;
 drawBuffer();
