@@ -1,10 +1,11 @@
 class AudioEffects {
-    // Universal Offline Context Wrapper with Tail Compensation
+    // Universal Offline Context Wrapper with iOS/Safari Support
     static async applyOfflineEffect(buffer, sampleRate, setupFn, extraSec = 0, outChannels = 1) {
         if (!buffer || buffer.length === 0) return buffer;
+        const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
         const extraSamples = Math.floor(extraSec * sampleRate);
         const totalLength = buffer.length + extraSamples;
-        const offlineCtx = new OfflineAudioContext(outChannels, totalLength, sampleRate);
+        const offlineCtx = new OfflineCtx(outChannels, totalLength, sampleRate);
         const source = offlineCtx.createBufferSource();
         const audioBuffer = offlineCtx.createBuffer(1, buffer.length, sampleRate);
         audioBuffer.copyToChannel(buffer, 0);
@@ -13,6 +14,46 @@ class AudioEffects {
         source.start(0);
         const renderedBuffer = await offlineCtx.startRendering();
         return outChannels === 1 ? renderedBuffer.getChannelData(0) : [renderedBuffer.getChannelData(0), renderedBuffer.getChannelData(1)];
+    }
+
+    // --- RMS-BASED SILENCE REMOVAL (FIXED LOGIC) ---
+    static async removeSilence(buffer, sampleRate, threshold = 0.005) {
+        const blockSize = Math.floor(sampleRate * 0.02); // 20ms blocks
+        const result = [];
+        for (let i = 0; i < buffer.length; i += blockSize) {
+            let sum = 0;
+            const end = Math.min(i + blockSize, buffer.length);
+            for (let j = i; j < end; j++) sum += buffer[j] * buffer[j];
+            const rms = Math.sqrt(sum / (end - i));
+            if (rms >= threshold) {
+                for (let j = i; j < end; j++) result.push(buffer[j]);
+            }
+        }
+        return new Float32Array(result);
+    }
+
+    // --- SMOOTH NOISE GATE (FIXED LOGIC) ---
+    static async applyNoiseGate(buffer, sampleRate, threshold = 0.01) {
+        const blockSize = Math.floor(sampleRate * 0.01); // 10ms for smoothing
+        const output = new Float32Array(buffer.length);
+        let currentGain = 1.0;
+        const attack = 0.1; // Smooth transition
+        const release = 0.05;
+
+        for (let i = 0; i < buffer.length; i += blockSize) {
+            let sum = 0;
+            const end = Math.min(i + blockSize, buffer.length);
+            for (let j = i; j < end; j++) sum += buffer[j] * buffer[j];
+            const rms = Math.sqrt(sum / (end - i));
+            const targetGain = rms < threshold ? 0 : 1;
+            
+            for (let j = i; j < end; j++) {
+                // Simple linear interpolation for gain to avoid crackle
+                currentGain += (targetGain - currentGain) * (targetGain > currentGain ? attack : release);
+                output[j] = buffer[j] * currentGain;
+            }
+        }
+        return output;
     }
 
     // --- BASIC UTILITIES ---
@@ -54,14 +95,6 @@ class AudioEffects {
         const output = new Float32Array(buffer.length);
         for (let i = 0; i < buffer.length; i++) output[i] = -buffer[i];
         return output;
-    }
-
-    static async removeSilence(buffer, sampleRate, threshold = 0.01) {
-        const result = [];
-        for (let i = 0; i < buffer.length; i++) {
-            if (Math.abs(buffer[i]) >= threshold) result.push(buffer[i]);
-        }
-        return new Float32Array(result);
     }
 
     // --- STUDIO EFFECTS ---
