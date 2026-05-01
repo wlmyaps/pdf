@@ -1,40 +1,47 @@
+:root {
+    --bg-color: #121212;
+    --container-bg: #1e1e1e;
+    --primary-color: #03dac6;
+    --secondary-color: #bb86fc;
+    --text-color: #e0e0e0;
+    --error-color: #f44336;
+    --record-color: #cf6679;
+}
+
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #1a1a1a;
-    color: #e0e0e0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
-    padding: 20px;
+    padding: 0;
 }
 
 .container {
-    max-width: 900px;
-    margin: 0 auto;
-    background-color: #2d2d2d;
+    max-width: 1000px;
+    margin: 20px auto;
     padding: 20px;
+    background: var(--container-bg);
     border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
 header {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
 }
 
-h1 { margin: 0; color: #4CAF50; }
-p { margin: 5px 0; color: #888; }
+h1 { color: var(--primary-color); margin: 0; }
+.version { font-size: 0.5em; vertical-align: middle; opacity: 0.7; }
 
 .visualizer-container {
     background: #000;
-    height: 150px;
     border-radius: 8px;
     margin-bottom: 20px;
+    height: 200px;
     overflow: hidden;
 }
 
-#waveform {
-    width: 100%;
-    height: 100%;
-}
+canvas { width: 100%; height: 100%; display: block; }
 
 .controls-main {
     display: flex;
@@ -50,80 +57,86 @@ p { margin: 5px 0; color: #888; }
     border-radius: 6px;
     cursor: pointer;
     font-weight: bold;
-    transition: background 0.3s;
+    transition: all 0.2s;
 }
 
-.btn-record { background: #f44336; color: white; }
-.btn-stop { background: #9e9e9e; color: white; }
-.btn-play { background: #4CAF50; color: white; }
-.btn-load { background: #2196F3; color: white; }
-.btn-save { background: #FF9800; color: white; }
-
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.effects-panel {
-    border-top: 1px solid #444;
-    padding-top: 20px;
-}
-
-.effects-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.effect-control {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-record { background: var(--record-color); color: white; }
+.btn-stop { background: #555; color: white; }
+.btn-play { background: var(--primary-color); color: #000; }
+.btn-load { background: var(--secondary-color); color: #000; }
+.btn-save { background: #4caf50; color: white; }
+.btn-magic { background: linear-gradient(45deg, #6200ea, #03dac6); color: white; }
+.btn-apply { background: var(--primary-color); color: #000; margin-top: 15px; }
 
 .full-width { width: 100%; }
 
-.eq-bands {
+.studio-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .studio-layout { grid-template-columns: 1fr; }
+}
+
+.effects-panel, .eq-panel {
+    background: #252525;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.control-group {
+    margin-bottom: 15px;
+}
+
+.control-group label { display: block; margin-bottom: 5px; font-size: 0.9em; }
+.control-group input[type="range"] { width: 100%; }
+
+.effects-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.btn-fx {
+    padding: 8px;
+    background: #333;
+    border: 1px solid #444;
+    color: #ccc;
+    border-radius: 4px;
+    font-size: 0.8em;
+    cursor: pointer;
+}
+
+.btn-fx:hover { background: #444; color: white; }
+
+.eq-container {
     display: flex;
-    gap: 5px;
-    overflow-x: auto;
-    padding: 10px 0;
+    justify-content: space-between;
     height: 150px;
-    align-items: flex-end;
+    padding: 10px 0;
 }
 
 .eq-band {
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-width: 30px;
+    width: 4%;
 }
 
-.eq-band input {
-    writing-mode: bt-lr;
-    -webkit-appearance: slider-vertical;
-    width: 10px;
+.eq-band input[type="range"] {
+    writing-mode: bt-lr; /* IE */
+    appearance: slider-vertical;
+    width: 8px;
     height: 100px;
+    padding: 0 5px;
 }
 
 .eq-band label {
-    font-size: 10px;
+    font-size: 0.6em;
     margin-top: 5px;
-    color: #aaa;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
 }
-
-.effect-buttons {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 10px;
-}
-
-.btn-fx {
-    background: #444;
-    color: #ddd;
-    border: 1px solid #555;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-}
-
-.btn-fx:hover { background: #555; }
-.btn-fx.active { background: #4CAF50; color: white; }
