@@ -603,7 +603,7 @@
     // ========== AUDIO ENGINE ==========
     const eqF=[31,62,125,250,500,1000,2000,4000,8000,16000];
     const pre={ Flat:[0,0,0,0,0,0,0,0,0,0], 'Full Bass':[8,7,6,5,4,2,0,-2,-4,-5], 'Clear Vocal':[-2,-1,0,2,4,5,3,1,0,-1], 'Treble Boost':[-3,-2,-1,0,2,4,6,7,8,9], Rock:[5,4,3,2,1,2,4,5,6,5], Electronic:[7,5,3,1,0,1,3,5,6,7] };
-    let audioCtx, sourceNode, analyserNode, gainNode, panNode, compressorNode, filters=[], animId, eqGains=Array(eqF.length).fill(0), viz='classic', hls=null;
+    let audioCtx, sourceNode, analyserNode, gainNode, panNode, compressorNode, filters=[], animId, eqGains=Array(eqF.length).fill(0), viz='classic', hls=null, streamAbort=null;
 
     const media=document.getElementById('videoPlayer'), playBtn=document.getElementById('playBtn'), prevBtn=document.getElementById('prevBtn'), nextBtn=document.getElementById('nextBtn'), stopBtn=document.getElementById('stopBtn');
     const volS=document.getElementById('volSlider'), panS=document.getElementById('panSlider'), speedS=document.getElementById('speedSelector'), timeD=document.getElementById('timeDisplay');
@@ -665,11 +665,111 @@
     media.addEventListener('timeupdate',()=>{ if(!media.src||media.readyState<1) return; const c=media.currentTime, d=media.duration; if(isNaN(c)||isNaN(d)) return; timeD.textContent=`${fmt(c)} / ${fmt(d)}`; updSeek(); });
     function updateMS(t,a){ if('mediaSession' in navigator) navigator.mediaSession.metadata=new MediaMetadata({title:t,artist:a,artwork:[{src:'https://via.placeholder.com/512x512.png?text=MP',sizes:'512x512',type:'image/png'}]}); }
     function togglePP(){ initAudioEngine(); if(audioCtx?.state==='suspended') audioCtx.resume(); if(!media.src&&playlist.length){ curIdx=0; radioMode=false; speedS.disabled=false; loadPlay(); return; } if(!media.src) return; if(media.paused) media.play().catch(()=>{}); else media.pause(); }
-    async function loadPlay(){ if(curIdx<0||curIdx>=playlist.length) return; initAudioEngine(); media.pause(); if(hls){ hls.destroy(); hls=null; } if(curUrl){ URL.revokeObjectURL(curUrl); curUrl=null; } const it=playlist[curIdx]; curUrl=URL.createObjectURL(it.file); media.src=curUrl; media.classList.toggle('active',it.type.startsWith('video/')); trackSt.textContent='Loading...'; trackTi.textContent=it.name; trackAr.textContent=it.type.startsWith('video/')?'Video File':'Audio File'; trackEx.textContent=`Format: ${it.type}`; updateMS(it.name, trackAr.textContent); readMeta(it.file); wavesurfer.load(curUrl); media.playbackRate=parseFloat(speedS.value); try{ await media.play(); } catch{ trackSt.textContent='Autoplay Blocked - Click Play'; } updPlUI(); }
-    function stopPlay(){ media.pause(); media.currentTime=0; playing=false; playBtn.innerHTML='<i class="fas fa-play"></i>'; trackSt.textContent='Stopped'; radioMode=false; speedS.disabled=false; }
-    async function playStream(url,name){ initAudioEngine(); media.pause(); if(hls){ hls.destroy(); hls=null; } if(curUrl){ URL.revokeObjectURL(curUrl); curUrl=null; } if(url.endsWith('.m3u8')||url.includes('m3u8')){ if(Hls.isSupported()){ hls=new Hls(); hls.loadSource(url); hls.attachMedia(media); hls.on(Hls.Events.MANIFEST_PARSED,()=>media.play()); } else if(media.canPlayType('application/vnd.apple.mpegurl')){ media.src=url; media.play(); } media.classList.add('active'); } else { media.src=url; media.crossOrigin='anonymous'; media.classList.remove('active'); media.play(); } trackSt.textContent='Streaming'; trackTi.textContent=name; trackAr.textContent='Live Content'; trackEx.textContent=''; updateMS(name,'Live'); radioMode=true; speedS.value='1'; speedS.disabled=true; }
-    radioS.onchange=e=>{ if(e.target.value) playStream(e.target.value, e.target.options[e.target.selectedIndex].text); };
-    document.getElementById('hlsTestBtn').onclick=()=>{ const url=document.getElementById('hlsInput').value; if(url) playStream(url,'Custom HLS'); };
+    async function loadPlay(){ if(curIdx<0||curIdx>=playlist.length) return; initAudioEngine(); media.pause(); if(hls){ hls.destroy(); hls=null; } if(streamAbort){ streamAbort.abort(); streamAbort=null; } if(curUrl){ URL.revokeObjectURL(curUrl); curUrl=null; } const it=playlist[curIdx]; curUrl=URL.createObjectURL(it.file); media.src=curUrl; media.classList.toggle('active',it.type.startsWith('video/')); trackSt.textContent='Loading...'; trackTi.textContent=it.name; trackAr.textContent=it.type.startsWith('video/')?'Video File':'Audio File'; trackEx.textContent=`Format: ${it.type}`; updateMS(it.name, trackAr.textContent); readMeta(it.file); wavesurfer.load(curUrl); media.playbackRate=parseFloat(speedS.value); try{ await media.play(); } catch{ trackSt.textContent='Autoplay Blocked - Click Play'; } updPlUI(); }
+    function stopPlay(){ media.pause(); media.currentTime=0; playing=false; playBtn.innerHTML='<i class="fas fa-play"></i>'; trackSt.textContent='Stopped'; radioMode=false; speedS.disabled=false; if(hls){ hls.destroy(); hls=null; } if(streamAbort){ streamAbort.abort(); streamAbort=null; } }
+
+    // ========== PERBAIKAN UTAMA: playStream dengan abort controller ==========
+    async function playStream(url, name) {
+      initAudioEngine();
+      if (audioCtx?.state === 'suspended') await audioCtx.resume();
+
+      // Batalkan stream yang sedang berjalan
+      if (streamAbort) {
+        streamAbort.abort();
+        streamAbort = null;
+      }
+      if (hls) {
+        hls.destroy();
+        hls = null;
+      }
+      if (curUrl) {
+        URL.revokeObjectURL(curUrl);
+        curUrl = null;
+      }
+
+      // Buat abort controller baru
+      streamAbort = new AbortController();
+      const signal = streamAbort.signal;
+
+      // Reset media
+      media.pause();
+      media.removeAttribute('src');
+      media.load();
+      media.classList.remove('active');
+
+      trackSt.textContent = 'Buffering...';
+      trackTi.textContent = name;
+      trackAr.textContent = 'Live Content';
+      trackEx.textContent = '';
+      updateMS(name, 'Live');
+      radioMode = true;
+      playBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i>';
+      speedS.value = '1';
+      speedS.disabled = true;
+
+      try {
+        if (url.endsWith('.m3u8') || url.includes('m3u8')) {
+          if (Hls.isSupported()) {
+            hls = new Hls({ lowLatencyMode: false });
+            hls.loadSource(url);
+            hls.attachMedia(media);
+
+            await new Promise((resolve, reject) => {
+              hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                if (signal.aborted) return;
+                media.play().then(resolve).catch(reject);
+              });
+              hls.on(Hls.Events.ERROR, (event, data) => {
+                if (data.fatal) {
+                  hls.destroy();
+                  hls = null;
+                  reject(new Error('Fatal HLS error'));
+                }
+              });
+              // Jika abort terjadi
+              signal.addEventListener('abort', () => {
+                if (hls) { hls.destroy(); hls = null; }
+                reject(new Error('Aborted'));
+              }, { once: true });
+            });
+
+            media.classList.add('active');
+          } else if (media.canPlayType('application/vnd.apple.mpegurl')) {
+            media.src = url;
+            media.classList.add('active');
+            await media.play();
+          } else {
+            throw new Error('HLS tidak didukung di browser ini.');
+          }
+        } else {
+          // Radio stream biasa
+          media.src = url;
+          media.crossOrigin = 'anonymous';
+          await media.play();
+        }
+
+        trackSt.textContent = 'Streaming';
+        playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        playing = true;
+      } catch (err) {
+        if (err.message === 'Aborted') return; // Jangan tampilkan error jika di-abort
+        console.error('Stream error:', err);
+        trackSt.textContent = 'Stream Error';
+        trackAr.textContent = 'Gagal memuat channel';
+        playBtn.innerHTML = '<i class="fas fa-play"></i>';
+        radioMode = false;
+        speedS.disabled = false;
+      }
+    }
+
+    radioS.onchange = e => {
+      if (e.target.value) playStream(e.target.value, e.target.options[e.target.selectedIndex].text);
+    };
+    document.getElementById('hlsTestBtn').onclick = () => {
+      const url = document.getElementById('hlsInput').value;
+      if (url) playStream(url, 'Custom HLS');
+    };
+
     function readMeta(f){ if(!f||!window.jsmediatags) return; window.jsmediatags.read(f,{ onSuccess:tag=>{ if(tag.tags.title) trackTi.textContent=tag.tags.title; if(tag.tags.artist) trackAr.textContent=`${tag.tags.artist}${tag.tags.album?' • '+tag.tags.album:''}`; updateMS(trackTi.textContent, trackAr.textContent); }, onError:()=>{} }); }
     media.addEventListener('ended',()=>{ if(radioMode) return; if(curIdx<playlist.length-1){ curIdx++; loadPlay(); } else { stopPlay(); trackSt.textContent='Finished'; } });
     media.addEventListener('play',()=>{ playing=true; playBtn.innerHTML='<i class="fas fa-pause"></i>'; if(trackSt.textContent!=='Streaming') trackSt.textContent='Playing'; if(audioCtx?.state==='suspended') audioCtx.resume(); });
