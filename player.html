@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Super Player Maha Karya William Yap</title>
+  <title>Super Player present by William Yap</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://unpkg.com/wavesurfer.js@7"></script>
   <script src="https://unpkg.com/wavesurfer.js@7/dist/plugins/hover.min.js"></script>
   <script src="https://unpkg.com/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
   <script src="https://unpkg.com/lamejs@1.2.0/lame.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <style>
     :root {
@@ -33,36 +34,14 @@
       min-height: 100vh; padding: 20px 10px; overflow-y: auto;
     }
 
-    #passwordOverlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: var(--bg-grad); backdrop-filter: blur(15px);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 9999; flex-direction: column;
-    }
+    #passwordOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-grad); backdrop-filter: blur(15px); display: flex; align-items: center; justify-content: center; z-index: 9999; flex-direction: column; }
     #passwordOverlay.hidden { display: none; }
-    .lock-box {
-      background: var(--glass); border: 1px solid var(--glass-border);
-      border-radius: 20px; padding: 30px; text-align: center;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-    }
-    .lock-box input {
-      background: var(--btn); border: 1px solid var(--track); color: var(--text);
-      padding: 10px; border-radius: 10px; width: 100%; margin: 15px 0; outline: none;
-      font-size: 1rem; text-align: center;
-    }
-    .lock-box button {
-      background: var(--accent); border: none; padding: 10px 20px; border-radius: 10px;
-      color: #000; font-weight: bold; cursor: pointer; transition: 0.3s;
-    }
+    .lock-box { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+    .lock-box input { background: var(--btn); border: 1px solid var(--track); color: var(--text); padding: 10px; border-radius: 10px; width: 100%; margin: 15px 0; outline: none; font-size: 1rem; text-align: center; }
+    .lock-box button { background: var(--accent); border: none; padding: 10px 20px; border-radius: 10px; color: #000; font-weight: bold; cursor: pointer; transition: 0.3s; }
     .lock-box button:hover { background: #fff; }
 
-    .player-box {
-      width: 450px; max-width: 100%;
-      background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border-radius: 24px; padding: 24px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.8); border: 1px solid var(--glass-border);
-      user-select: none; height: fit-content; margin: 0 auto;
-    }
+    .player-box { width: 450px; max-width: 100%; background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 24px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); border: 1px solid var(--glass-border); user-select: none; height: fit-content; margin: 0 auto; }
 
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--glass-border); }
     .clock { font-size: 1.1rem; font-weight: 700; color: var(--accent); font-family: 'Courier New', monospace; }
@@ -74,89 +53,47 @@
     .track-artist { font-size: 0.8rem; color: var(--dim); margin-top: 2px; }
     .track-info-extra { font-size: 0.6rem; color: var(--dim); margin-top: 2px; }
 
-    #videoPlayer {
-      width: 100%; max-height: 200px; border-radius: 12px; background: #000; margin-bottom: 12px;
-      display: none; object-fit: contain; border: 1px solid var(--glass-border);
-    }
+    #videoPlayer { width: 100%; max-height: 200px; border-radius: 12px; background: #000; margin-bottom: 12px; display: none; object-fit: contain; border: 1px solid var(--glass-border); }
     #videoPlayer.active { display: block; }
 
-    #waveform-container {
-      position: relative; width: 100%; height: 120px; margin-bottom: 10px; border-radius: 12px;
-      background: rgba(0,0,0,0.5); overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
-    }
-    #waveform {
-      width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1;
-      opacity: 0.3; pointer-events: none;
-    }
-    #visualizer {
-      width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 2;
-      pointer-events: none; display: block;
-    }
-
-    .viz-theme-select {
-      position: absolute; top: 6px; right: 10px; z-index: 5;
-      background: var(--btn); border: 1px solid var(--track); color: var(--text);
-      padding: 2px 6px; border-radius: 5px; font-size: 0.6rem; cursor: pointer; outline: none;
-    }
+    #waveform-container { position: relative; width: 100%; height: 120px; margin-bottom: 10px; border-radius: 12px; background: rgba(0,0,0,0.5); overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+    #waveform { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; opacity: 0.3; pointer-events: none; }
+    #visualizer { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 2; pointer-events: none; display: block; }
+    .viz-theme-select { position: absolute; top: 6px; right: 10px; z-index: 5; background: var(--btn); border: 1px solid var(--track); color: var(--text); padding: 2px 6px; border-radius: 5px; font-size: 0.6rem; cursor: pointer; outline: none; }
 
     .seek-container { width: 100%; margin-bottom: 10px; }
-    .seek-container input[type=range] {
-      width: 100%; height: 6px; background: var(--track); border-radius: 3px;
-      appearance: none; cursor: pointer; outline: none;
-    }
-    .seek-container input[type=range]::-webkit-slider-thumb {
-      appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%;
-      box-shadow: 0 0 8px var(--accent-glow);
-    }
+    .seek-container input[type=range] { width: 100%; height: 6px; background: var(--track); border-radius: 3px; appearance: none; cursor: pointer; outline: none; }
+    .seek-container input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 8px var(--accent-glow); }
 
     .controls { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
-    .controls button {
-      width: 40px; height: 40px; border: none; background: var(--btn); color: var(--text);
-      border-radius: 50%; cursor: pointer; font-size: 1rem; transition: 0.3s;
-      display: flex; align-items: center; justify-content: center;
-    }
+    .controls button { width: 40px; height: 40px; border: none; background: var(--btn); color: var(--text); border-radius: 50%; cursor: pointer; font-size: 1rem; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
     .controls button#playBtn { width: 50px; height: 50px; font-size: 1.2rem; background: var(--accent); color: #000; box-shadow: 0 0 15px var(--accent-glow); }
     .controls button:hover { background: var(--btn-hover); transform: scale(1.05); }
     .controls button#playBtn:hover { background: #fff; transform: scale(1.1); }
-
     .time-display { flex: 1; text-align: right; font-family: 'Courier New', monospace; font-size: 0.85rem; color: var(--accent); font-weight: bold; }
 
     .knobs { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
     .knob-group { display: flex; flex-direction: column; gap: 6px; }
     .knob-group label { font-size: 0.7rem; color: var(--dim); display: flex; align-items: center; gap: 5px; justify-content: space-between; }
     .knob-group label span { color: var(--text); font-weight: 600; margin-left: 4px; }
-    .knob-group input[type=range] {
-      width: 100%; height: 5px; background: var(--track); border-radius: 5px; appearance: none; cursor: pointer;
-    }
-    .knob-group input[type=range]::-webkit-slider-thumb {
-      appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 8px var(--accent-glow);
-    }
+    .knob-group input[type=range] { width: 100%; height: 5px; background: var(--track); border-radius: 5px; appearance: none; cursor: pointer; }
+    .knob-group input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 8px var(--accent-glow); }
 
     .speed-control { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
     .speed-control label { font-size: 0.7rem; color: var(--dim); white-space: nowrap; }
-    .speed-control select {
-      flex: 1; background: var(--btn); color: var(--text); border: 1px solid var(--track);
-      padding: 5px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; outline: none;
-    }
+    .speed-control select { flex: 1; background: var(--btn); color: var(--text); border: 1px solid var(--track); padding: 5px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; outline: none; }
     .speed-control select:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .radio-section { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--glass-border); }
-    .radio-section select {
-      width: 100%; background: var(--btn); color: var(--text); border: 1px solid var(--track);
-      padding: 8px; border-radius: 8px; font-size: 0.85rem; outline: none;
-    }
+    .radio-section, .hls-tester-section { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--glass-border); }
+    .radio-section select, .hls-tester-section input { width: 100%; background: var(--btn); color: var(--text); border: 1px solid var(--track); padding: 8px; border-radius: 8px; font-size: 0.85rem; outline: none; }
+    .hls-tester-section { display: flex; flex-direction: column; gap: 8px; }
+    .hls-tester-section button { background: var(--accent); border: none; padding: 8px; border-radius: 8px; color: #000; font-weight: bold; cursor: pointer; }
 
     .playlist-section { margin-top: 15px; border-top: 1px solid var(--glass-border); padding-top: 15px; }
     .playlist-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .playlist-header h3 { font-size: 0.9rem; color: var(--accent); display: flex; align-items: center; gap: 8px; }
-    .playlist-container {
-      max-height: 180px; overflow-y: auto; background: var(--playlist-bg);
-      border-radius: 10px; padding: 5px; border: 1px solid rgba(255,255,255,0.05);
-    }
-    .playlist-item {
-      display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px;
-      margin-bottom: 4px; cursor: pointer; transition: 0.2s; font-size: 0.8rem;
-    }
+    .playlist-container { max-height: 180px; overflow-y: auto; background: var(--playlist-bg); border-radius: 10px; padding: 5px; border: 1px solid rgba(255,255,255,0.05); }
+    .playlist-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; margin-bottom: 4px; cursor: pointer; transition: 0.2s; font-size: 0.8rem; }
     .playlist-item:hover { background: rgba(255,255,255,0.05); }
     .playlist-item.active { background: rgba(0, 229, 255, 0.15); border-left: 3px solid var(--accent); }
     .playlist-item .item-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -168,39 +105,22 @@
     .eq-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .eq-header span { font-size: 0.8rem; color: var(--dim); }
     .eq-header-controls { display: flex; gap: 5px; }
-    .eq-header select, .eq-header button {
-      background: var(--btn); color: var(--text); border: 1px solid var(--track); padding: 4px 8px;
-      border-radius: 6px; font-size: 0.75rem; cursor: pointer;
-    }
+    .eq-header select, .eq-header button { background: var(--btn); color: var(--text); border: 1px solid var(--track); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; }
     .eq-sliders { display: flex; gap: 4px; justify-content: space-between; overflow-x: auto; padding-bottom: 10px; }
     .eq-slider { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 30px; }
     .slider-wrap { height: 80px; display: flex; align-items: center; width: 100%; }
-    .slider-wrap input {
-      appearance: none; width: 100%; height: 5px; background: var(--track);
-      border-radius: 5px; outline: none; transform: rotate(-90deg); cursor: pointer;
-    }
-    .slider-wrap input::-webkit-slider-thumb {
-      appearance: none; width: 10px; height: 10px; background: var(--accent); border-radius: 50%;
-    }
+    .slider-wrap input { appearance: none; width: 100%; height: 5px; background: var(--track); border-radius: 5px; outline: none; transform: rotate(-90deg); cursor: pointer; }
+    .slider-wrap input::-webkit-slider-thumb { appearance: none; width: 10px; height: 10px; background: var(--accent); border-radius: 50%; }
     .eq-slider label { font-size: 0.6rem; color: var(--dim); margin-top: 5px; }
 
     .rec-section { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--glass-border); }
-    .rec-section button, .screen-rec-section button {
-      padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.8rem; transition: 0.3s;
-      background: var(--btn); color: var(--text); display: flex; align-items: center; justify-content: center; gap: 8px;
-    }
+    .rec-section button, .screen-rec-section button { padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.8rem; transition: 0.3s; background: var(--btn); color: var(--text); display: flex; align-items: center; justify-content: center; gap: 8px; }
     #recBtn.recording, #screenRecBtn.recording { background: var(--rec-red); color: #fff; animation: pulse 1.5s infinite; }
     #saveRecBtn:disabled { opacity: 0.5; cursor: not-allowed; }
-
     .screen-rec-section { margin-top: 10px; }
     .screen-rec-section button { width: 100%; }
 
-    .add-btn {
-      display: flex; align-items: center; justify-content: center; gap: 10px;
-      width: 100%; padding: 12px; margin-top: 15px; background: var(--btn);
-      border: 1px dashed var(--accent); border-radius: 10px; color: var(--accent); cursor: pointer;
-      text-align: center; font-size: 0.85rem; transition: 0.3s; font-weight: 600;
-    }
+    .add-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; margin-top: 15px; background: var(--btn); border: 1px dashed var(--accent); border-radius: 10px; color: var(--accent); cursor: pointer; text-align: center; font-size: 0.85rem; transition: 0.3s; font-weight: 600; }
     .add-btn:hover { background: var(--btn-hover); border-style: solid; }
     .file-input { display: none; }
 
@@ -231,8 +151,8 @@
 
   <div class="meta-info">
     <div class="track-status" id="trackStatus">Idle</div>
-    <div class="track-title" id="trackTitle">Super Player present by William Yap</div>
-    <div class="track-artist" id="trackArtist">Buka file untuk memulai</div>
+    <div class="track-title" id="trackTitle">Selamat Datang di Pro Player</div>
+    <div class="track-artist" id="trackArtist">Buka file untuk memulai menggunakan Pro Player</div>
     <div class="track-info-extra" id="trackExtra"></div>
   </div>
 
@@ -243,7 +163,7 @@
     <canvas id="visualizer"></canvas>
     <select id="vizTheme" class="viz-theme-select">
       <option value="spectrum">Spectrum</option>
-      <option value="classic">Classic Bars</option>
+      <option value="classic" selected>Classic Bars</option>
       <option value="rainbow">Rainbow</option>
       <option value="fire">Fire</option>
       <option value="ocean">Ocean</option>
@@ -276,33 +196,39 @@
   <div class="speed-control">
     <label><i class="fas fa-tachometer-alt"></i> Speed:</label>
     <select id="speedSelector">
-      <option value="0.25">0.25x</option>
-      <option value="0.5">0.5x</option>
-      <option value="0.75">0.75x</option>
-      <option value="1" selected>1.0x</option>
-      <option value="1.25">1.25x</option>
-      <option value="1.5">1.5x</option>
-      <option value="1.75">1.75x</option>
-      <option value="2">2.0x</option>
-      <option value="3">3.0x</option>
-      <option value="4">4.0x</option>
+      <option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="0.75">0.75x</option>
+      <option value="1" selected>1.0x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option>
+      <option value="1.75">1.75x</option><option value="2">2.0x</option><option value="3">3.0x</option><option value="4">4.0x</option>
     </select>
   </div>
 
   <div class="radio-section">
     <select id="radioSelector">
-      <option value="">?? Pilih Radio Streaming...</option>
-      <option value="https://22393.live.streamtheworld.com/LOVE972FMAAC.aac?dist=radiosingapore">Love 972 FM</option>
-      <option value="https://22903.live.streamtheworld.com/YES933_PREM.aac?dist=radiosingapore">YES 933 FM</option>
-      <option value="https://22393.live.streamtheworld.com/GOLD905AAC.aac?dist=radiosingapore">Gold 905 FM</option>
-      <option value="https://28373.live.streamtheworld.com/OLI968FM_PREM.aac?dist=radiosingapore">Oli 968 FM</option>
-      <option value="https://28323.live.streamtheworld.com/CLASS95AAC_SC">Class 95 FM</option>
-      <option value="https://22893.live.streamtheworld.com/987FMAAC.aac?dist=radiosingapore">987 FM</option>
-      <option value="https://stream.zeno.fm/s84858548">LoFi Hip Hop</option>
-      <option value="https://stream.zeno.fm/0r0xa792kwzuv">Jazz Radio</option>
-	  <option value="https://28393.live.streamtheworld.com/RIA897FMAAC.aac?dist=radiosingapore">Ria 89,7</option>
-	  <option value="https://28093.live.streamtheworld.com/KISS_92_SC">Kiss 92</option>
+      <option value="">?? Pilih Channel TV / Radio...</option>
+      <optgroup label="TV Channels">
+        <option value="https://pull.daaiplus.com/live-DAAIPLUS/live-DAAIPLUS_HD.m3u8">DAAI TV</option>
+        <option value="https://live.cnbcindonesia.com/livecnbc/smil:cnbctv.smil/chunklist_w65334918_b384000_sleng.m3u8">CNBC Indonesia</option>
+        <option value="https://op-group1-swiftservehd-1.dens.tv/h/h221/01.m3u8">DFC Food Channel</option>
+        <option value="https://hgmtv.com:19360/garudatvlivestreaming/720p.m3u8">Garuda TV</option>
+      </optgroup>
+      <optgroup label="Radio Streams">
+        <option value="https://22393.live.streamtheworld.com/LOVE972FMAAC.aac?dist=radiosingapore">Love 972 FM</option>
+        <option value="https://22903.live.streamtheworld.com/YES933_PREM.aac?dist=radiosingapore">YES 933 FM</option>
+        <option value="https://22393.live.streamtheworld.com/GOLD905AAC.aac?dist=radiosingapore">Gold 905 FM</option>
+        <option value="https://28373.live.streamtheworld.com/OLI968FM_PREM.aac?dist=radiosingapore">Oli 968 FM</option>
+        <option value="https://28323.live.streamtheworld.com/CLASS95AAC_SC">Class 95 FM</option>
+        <option value="https://22893.live.streamtheworld.com/987FMAAC.aac?dist=radiosingapore">987 FM</option>
+        <option value="https://stream.zeno.fm/s84858548">LoFi Hip Hop</option>
+        <option value="https://stream.zeno.fm/0r0xa792kwzuv">Jazz Radio</option>
+        <option value="https://28393.live.streamtheworld.com/RIA897FMAAC.aac?dist=radiosingapore">Ria 89,7</option>
+        <option value="https://28093.live.streamtheworld.com/KISS_92_SC">Kiss 92</option>
+      </optgroup>
     </select>
+  </div>
+
+  <div class="hls-tester-section">
+    <input type="text" id="hlsInput" placeholder="Paste link HLS (.m3u8) di sini...">
+    <button id="hlsTestBtn"><i class="fas fa-play-circle"></i> Test HLS Stream</button>
   </div>
 
   <div class="playlist-section">
@@ -318,12 +244,8 @@
       <span><i class="fas fa-sliders-h"></i> 10-Band EQ</span>
       <div class="eq-header-controls">
         <select id="eqPreset">
-          <option value="Flat">Flat</option>
-          <option value="Full Bass">Full Bass</option>
-          <option value="Clear Vocal">Vocal</option>
-          <option value="Treble Boost">Treble</option>
-          <option value="Rock">Rock</option>
-          <option value="Electronic">Electronic</option>
+          <option value="Flat">Flat</option><option value="Full Bass">Full Bass</option><option value="Clear Vocal">Vocal</option>
+          <option value="Treble Boost">Treble</option><option value="Rock">Rock</option><option value="Electronic">Electronic</option>
         </select>
         <button id="savePresetBtn" title="Simpan Custom EQ"><i class="fas fa-save"></i></button>
         <button id="loadPresetBtn" title="Muat Custom EQ"><i class="fas fa-folder-open"></i></button>
@@ -346,7 +268,16 @@
 
 <script>
   (() => {
-    // ---------- PASSWORD (SHA-256) ----------
+    // ========== AUDIO WORKLET ==========
+    const recorderWorkletCode = `
+      class RecorderProcessor extends AudioWorkletProcessor {
+        constructor() { super(); this.recording = false; this.port.onmessage = (e) => { if(e.data.command==='START') this.recording=true; if(e.data.command==='STOP') this.recording=false; }; }
+        process(inputs) { if(this.recording && inputs[0] && inputs[0][0]) this.port.postMessage(inputs[0][0]); return true; }
+      }
+      registerProcessor('recorder-processor', RecorderProcessor);
+    `;
+
+    // ========== PASSWORD ==========
     const PASSWORD_HASH = '904a181ff00a1323a28d23fdb7a6b3bf9d42b87a08e3c8710dc85915634239e1';
     const overlay = document.getElementById('passwordOverlay');
     const passInput = document.getElementById('passInput');
@@ -355,787 +286,170 @@
     const playerBox = document.getElementById('playerBox');
 
     async function sha256(input) {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(input);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+      const data = new TextEncoder().encode(input);
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2,'0')).join('');
     }
 
     async function unlockPlayer() {
-      const inputHash = await sha256(passInput.value);
-      if (inputHash === PASSWORD_HASH) {
-        overlay.classList.add('hidden');
-        playerBox.style.display = '';
-        sessionStorage.setItem('miniplayer_auth', '1');
-        initAudioEngine();
-        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-        setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
-      } else {
-        passError.style.display = 'block';
-      }
+      if (await sha256(passInput.value) === PASSWORD_HASH) {
+        overlay.classList.add('hidden'); playerBox.style.display = '';
+        sessionStorage.setItem('miniplayer_auth','1');
+        initAudioEngine(); if(audioCtx?.state==='suspended') audioCtx.resume();
+        setTimeout(()=>window.dispatchEvent(new Event('resize')), 100);
+      } else passError.style.display='block';
     }
+    unlockBtn.onclick=unlockPlayer; passInput.addEventListener('keypress',e=>{ if(e.key==='Enter') unlockPlayer(); });
+    if(sessionStorage.getItem('miniplayer_auth')==='1') { overlay.classList.add('hidden'); playerBox.style.display=''; setTimeout(()=>window.dispatchEvent(new Event('resize')),100); }
 
-    unlockBtn.onclick = unlockPlayer;
-    passInput.addEventListener('keypress', async (e) => {
-      if (e.key === 'Enter') unlockPlayer();
-    });
+    // ========== INDEXEDDB ==========
+    const DB='MiniPlayerDB', ST='playlist'; let db;
+    function openDB(){ return new Promise((res,rej)=>{ const r=indexedDB.open(DB,1); r.onupgradeneeded=e=>{ if(!e.target.result.objectStoreNames.contains(ST)) e.target.result.createObjectStore(ST,{keyPath:'id',autoIncrement:true}); }; r.onsuccess=e=>{ db=e.target.result; res(db); }; r.onerror=rej; }); }
+    async function saveF(f){ if(!db) await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(ST,'readwrite'), s=tx.objectStore(ST), r=s.add({name:f.name,type:f.type,file:f}); r.onsuccess=()=>res(r.result); r.onerror=rej; }); }
+    async function allF(){ if(!db) await openDB(); return new Promise((res,rej)=>{ db.transaction(ST,'readonly').objectStore(ST).getAll().onsuccess=e=>res(e.target.result); }); }
+    async function delF(id){ if(!db) await openDB(); return new Promise((res,rej)=>{ db.transaction(ST,'readwrite').objectStore(ST).delete(id).onsuccess=res; }); }
+    async function clearF(){ if(!db) await openDB(); return new Promise((res,rej)=>{ db.transaction(ST,'readwrite').objectStore(ST).clear().onsuccess=res; }); }
 
-    if (sessionStorage.getItem('miniplayer_auth') === '1') {
-      overlay.classList.add('hidden');
-      playerBox.style.display = '';
-      setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
-    }
+    // ========== AUDIO ENGINE ==========
+    const eqF=[31,62,125,250,500,1000,2000,4000,8000,16000];
+    const pre={ Flat:[0,0,0,0,0,0,0,0,0,0], 'Full Bass':[8,7,6,5,4,2,0,-2,-4,-5], 'Clear Vocal':[-2,-1,0,2,4,5,3,1,0,-1], 'Treble Boost':[-3,-2,-1,0,2,4,6,7,8,9], Rock:[5,4,3,2,1,2,4,5,6,5], Electronic:[7,5,3,1,0,1,3,5,6,7] };
+    let audioCtx, sourceNode, analyserNode, gainNode, panNode, compressorNode, filters=[], animId, eqGains=Array(eqF.length).fill(0), viz='classic', hls=null;
 
-    // ---------- INDEXEDDB ----------
-    const DB_NAME = 'MiniPlayerDB';
-    const STORE_NAME = 'playlist';
-    let db = null;
+    const media=document.getElementById('videoPlayer'), playBtn=document.getElementById('playBtn'), prevBtn=document.getElementById('prevBtn'), nextBtn=document.getElementById('nextBtn'), stopBtn=document.getElementById('stopBtn');
+    const volS=document.getElementById('volSlider'), panS=document.getElementById('panSlider'), speedS=document.getElementById('speedSelector'), timeD=document.getElementById('timeDisplay');
+    const trackSt=document.getElementById('trackStatus'), trackTi=document.getElementById('trackTitle'), trackAr=document.getElementById('trackArtist'), trackEx=document.getElementById('trackExtra');
+    const radioS=document.getElementById('radioSelector'), plCont=document.getElementById('playlistContainer'), fileInp=document.getElementById('fileInput'), seekS=document.getElementById('seekSlider');
+    const volV=document.getElementById('volValue'), panV=document.getElementById('panValue'), vizSel=document.getElementById('vizTheme'), vizC=document.getElementById('visualizer');
 
-    function openDB() {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, 1);
-        request.onupgradeneeded = (e) => {
-          const db = e.target.result;
-          if (!db.objectStoreNames.contains(STORE_NAME)) {
-            db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-          }
-        };
-        request.onsuccess = (e) => { db = e.target.result; resolve(db); };
-        request.onerror = (e) => reject(e.target.error);
-      });
-    }
-
-    async function saveFileToDB(file) {
-      if (!db) await openDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        const store = tx.objectStore(STORE_NAME);
-        const request = store.add({ name: file.name, type: file.type, file: file });
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
-    }
-
-    async function getAllFilesFromDB() {
-      if (!db) await openDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readonly');
-        const store = tx.objectStore(STORE_NAME);
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
-    }
-
-    async function deleteFileFromDB(id) {
-      if (!db) await openDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        const store = tx.objectStore(STORE_NAME);
-        const request = store.delete(id);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
-    }
-
-    async function clearAllFilesFromDB() {
-      if (!db) await openDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        const store = tx.objectStore(STORE_NAME);
-        const request = store.clear();
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
-    }
-
-    // ---------- AUDIO ENGINE ----------
-    const eqFreqs = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
-    const presets = {
-      "Flat": [0,0,0,0,0,0,0,0,0,0],
-      "Full Bass": [8,7,6,5,4,2,0,-2,-4,-5],
-      "Clear Vocal": [-2,-1,0,2,4,5,3,1,0,-1],
-      "Treble Boost": [-3,-2,-1,0,2,4,6,7,8,9],
-      "Rock": [5,4,3,2,1,2,4,5,6,5],
-      "Electronic": [7,5,3,1,0,1,3,5,6,7]
-    };
-
-    let audioCtx = null, sourceNode = null, analyserNode = null;
-    let gainNode = null, panNode = null, compressorNode = null;
-    let filters = [];
-    let animationId = null;
-    let currentEQGains = new Array(eqFreqs.length).fill(0);
-    let vizTheme = 'spectrum';
-
-    const media = document.getElementById('videoPlayer');
-    const playBtn = document.getElementById('playBtn');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const volSlider = document.getElementById('volSlider');
-    const panSlider = document.getElementById('panSlider');
-    const speedSelector = document.getElementById('speedSelector');
-    const timeDisplay = document.getElementById('timeDisplay');
-    const trackStatus = document.getElementById('trackStatus');
-    const trackTitle = document.getElementById('trackTitle');
-    const trackArtist = document.getElementById('trackArtist');
-    const trackExtra = document.getElementById('trackExtra');
-    const radioSelector = document.getElementById('radioSelector');
-    const playlistContainer = document.getElementById('playlistContainer');
-    const fileInput = document.getElementById('fileInput');
-    const seekSlider = document.getElementById('seekSlider');
-    const volValue = document.getElementById('volValue');
-    const panValue = document.getElementById('panValue');
-    const vizThemeSelect = document.getElementById('vizTheme');
-    const visualizerCanvas = document.getElementById('visualizer');
-
-    const wavesurfer = WaveSurfer.create({
-      container: '#waveform',
-      media: media,
-      waveColor: 'rgba(0, 229, 255, 0.3)',
-      progressColor: 'rgba(0, 229, 255, 0.5)',
-      cursorColor: '#ff3b30',
-      height: 120,
-      barWidth: 2, barRadius: 2, barGap: 1,
-      plugins: [WaveSurfer.Hover.create({ lineColor: '#fff', lineWidth: 1, labelBackground: '#555' })]
-    });
+    const wavesurfer = WaveSurfer.create({ container:'#waveform', media, waveColor:'rgba(0,229,255,0.3)', progressColor:'rgba(0,229,255,0.5)', cursorColor:'#ff3b30', height:120, barWidth:2, barRadius:2, barGap:1, plugins:[WaveSurfer.Hover.create({lineColor:'#fff',lineWidth:1,labelBackground:'#555'})] });
 
     function initAudioEngine() {
-      if (audioCtx) return;
+      if(audioCtx) { if(audioCtx.state==='suspended') audioCtx.resume(); return; }
       try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        sourceNode = audioCtx.createMediaElementSource(media);
-        analyserNode = audioCtx.createAnalyser();
-        analyserNode.fftSize = 512;
-        compressorNode = audioCtx.createDynamicsCompressor();
-        panNode = audioCtx.createStereoPanner();
-        gainNode = audioCtx.createGain();
-        gainNode.gain.value = volSlider.value / 100;
-        panNode.pan.value = parseFloat(panSlider.value);
-
-        // Routing: source -> analyser -> EQ -> compressor -> pan -> gain -> destination
-        sourceNode.connect(analyserNode);
-        let prev = analyserNode;
-        filters = [];
-        eqFreqs.forEach((freq, i) => {
-          const f = audioCtx.createBiquadFilter();
-          f.type = 'peaking'; f.frequency.value = freq; f.Q.value = 1.0; f.gain.value = currentEQGains[i];
-          filters.push(f); prev.connect(f); prev = f;
-        });
-        prev.connect(compressorNode);
-        compressorNode.connect(panNode);
-        panNode.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-
+        audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+        sourceNode=audioCtx.createMediaElementSource(media); analyserNode=audioCtx.createAnalyser(); analyserNode.fftSize=512;
+        compressorNode=audioCtx.createDynamicsCompressor(); panNode=audioCtx.createStereoPanner(); gainNode=audioCtx.createGain();
+        gainNode.gain.value=volS.value/100; panNode.pan.value=parseFloat(panS.value);
+        sourceNode.connect(analyserNode); let prev=analyserNode; filters=[];
+        eqF.forEach((f,i)=>{ const fl=audioCtx.createBiquadFilter(); fl.type='peaking'; fl.frequency.value=f; fl.Q.value=1; fl.gain.value=eqGains[i]; filters.push(fl); prev.connect(fl); prev=fl; });
+        prev.connect(compressorNode); compressorNode.connect(panNode); panNode.connect(gainNode); gainNode.connect(audioCtx.destination);
         startVisualizer();
-      } catch (e) {
-        console.error('initAudioEngine error:', e);
-      }
+      } catch(e){ console.error(e); }
     }
 
-    function getGradient(theme, ctx, height) {
-      const g = ctx.createLinearGradient(0, height, 0, 0);
-      switch (theme) {
-        case 'rainbow':
-          g.addColorStop(0, '#ff0000'); g.addColorStop(0.3, '#ff8800'); g.addColorStop(0.6, '#ffff00'); g.addColorStop(1, '#00ff00');
-          break;
-        case 'fire':
-          g.addColorStop(0, '#ff0000'); g.addColorStop(0.5, '#ff6600'); g.addColorStop(1, '#ffff00');
-          break;
-        case 'ocean':
-          g.addColorStop(0, '#00aaff'); g.addColorStop(0.6, '#00ffff'); g.addColorStop(1, '#e0ffff');
-          break;
-        case 'spectrum':
-          g.addColorStop(0, '#00e5ff'); g.addColorStop(0.5, '#00ff88'); g.addColorStop(1, '#77ff00');
-          break;
-        case 'classic': default:
-          g.addColorStop(0, '#005f73'); g.addColorStop(0.6, '#00e5ff'); g.addColorStop(1, '#ffffff');
-          break;
-      }
-      return g;
+    function getGradient(t,ctx,h){
+      const g=ctx.createLinearGradient(0,h,0,0);
+      switch(t){
+        case'rainbow':g.addColorStop(0,'#f00');g.addColorStop(.3,'#f80');g.addColorStop(.6,'#ff0');g.addColorStop(1,'#0f0');break;
+        case'fire':g.addColorStop(0,'#f00');g.addColorStop(.5,'#f60');g.addColorStop(1,'#ff0');break;
+        case'ocean':g.addColorStop(0,'#0af');g.addColorStop(.6,'#0ff');g.addColorStop(1,'#eff');break;
+        case'spectrum':g.addColorStop(0,'#0ef');g.addColorStop(.5,'#0f8');g.addColorStop(1,'#7f0');break;
+        default:g.addColorStop(0,'#005f73');g.addColorStop(.6,'#0ef');g.addColorStop(1,'#fff');
+      }return g;
     }
 
-    function startVisualizer() {
-      if (!visualizerCanvas || !analyserNode) return;
-      const ctx = visualizerCanvas.getContext('2d');
-      const bufferLength = analyserNode.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      function draw() {
-        animationId = requestAnimationFrame(draw);
-        analyserNode.getByteFrequencyData(dataArray);
-        const w = visualizerCanvas.width;
-        const h = visualizerCanvas.height;
-        ctx.clearRect(0, 0, w, h);
-        if (w === 0 || h === 0) return;
-
-        if (vizTheme === 'spectrum') {
-          ctx.beginPath();
-          ctx.lineWidth = 3;
-          ctx.strokeStyle = getGradient(vizTheme, ctx, h);
-          const sliceWidth = w / bufferLength;
-          let x = 0;
-          for (let i = 0; i < bufferLength; i++) {
-            const v = dataArray[i] / 255.0;
-            const y = h - (v * h);
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-            x += sliceWidth;
-          }
-          ctx.stroke();
+    function startVisualizer(){
+      if(!vizC||!analyserNode) return; const ctx=vizC.getContext('2d'), bl=analyserNode.frequencyBinCount, dArr=new Uint8Array(bl);
+      function draw(){
+        animId=requestAnimationFrame(draw); analyserNode.getByteFrequencyData(dArr);
+        const w=vizC.width, h=vizC.height; ctx.clearRect(0,0,w,h); if(!w||!h) return;
+        if(viz==='spectrum'){
+          ctx.beginPath(); ctx.lineWidth=3; ctx.strokeStyle=getGradient(viz,ctx,h); const sw=w/bl; let x=0;
+          for(let i=0;i<bl;i++){ const y=h-(dArr[i]/255*h); i?ctx.lineTo(x,y):ctx.moveTo(x,y); x+=sw; } ctx.stroke();
         } else {
-          const barWidth = (w / bufferLength) * 2.5;
-          let x = 0;
-          ctx.fillStyle = getGradient(vizTheme, ctx, h);
-          for (let i = 0; i < bufferLength; i++) {
-            let barHeight = (dataArray[i] / 255) * h;
-            ctx.fillRect(x, h - barHeight, barWidth - 1, barHeight);
-            x += barWidth;
-          }
+          const bw=w/bl*2.5; let x=0; ctx.fillStyle=getGradient(viz,ctx,h);
+          for(let i=0;i<bl;i++){ const bh=dArr[i]/255*h; ctx.fillRect(x,h-bh,bw-1,bh); x+=bw; }
         }
       }
-
-      function resize() {
-        const container = document.getElementById('waveform-container');
-        if (container) {
-          visualizerCanvas.width = container.clientWidth;
-          visualizerCanvas.height = container.clientHeight;
-        }
-      }
-
-      window.addEventListener('resize', resize);
-      resize();
-      if (animationId) cancelAnimationFrame(animationId);
-      draw();
+      function resize(){ const c=document.getElementById('waveform-container'); if(c){ vizC.width=c.clientWidth; vizC.height=c.clientHeight; } }
+      window.addEventListener('resize',resize); resize(); cancelAnimationFrame(animId); draw();
     }
+    vizSel.onchange=e=>{ viz=e.target.value; };
 
-    vizThemeSelect.onchange = (e) => { vizTheme = e.target.value; };
+    // ========== STATE ==========
+    let playlist=[], curIdx=-1, curUrl=null, playing=false, radioMode=false, seeking=false;
+    function updPlUI(){ plCont.innerHTML=''; playlist.forEach((it,i)=>{ const d=document.createElement('div'); d.className=`playlist-item ${i===curIdx?'active':''}`; const ic=it.type.startsWith('video')?'fa-video':'fa-music'; d.innerHTML=`<i class="fas ${ic}"></i><div class="item-name">${esc(it.name)}</div><div class="item-type">${it.type.split('/')[1]||'file'}</div><div class="remove-btn"><i class="fas fa-times"></i></div>`; d.querySelector('.remove-btn').onclick=async e=>{ e.stopPropagation(); await delF(it.id); playlist.splice(i,1); if(i===curIdx){ stopPlay(); curIdx=-1; } else if(i<curIdx) curIdx--; updPlUI(); }; d.onclick=()=>{ if(i===curIdx) togglePP(); else { curIdx=i; radioMode=false; speedS.disabled=false; loadPlay(); } }; plCont.appendChild(d); }); }
+    function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+    function updSeek(){ if(seeking) return; const d=media.duration; if(!d||!isFinite(d)){ seekS.value=0; return; } seekS.value=(media.currentTime/d)*100; }
+    seekS.oninput=()=>{ const d=media.duration; if(!d||!isFinite(d)) return; seeking=true; media.currentTime=(seekS.value/100)*d; }; seekS.onchange=()=>{ seeking=false; };
+    media.addEventListener('timeupdate',()=>{ if(!media.src||media.readyState<1) return; const c=media.currentTime, d=media.duration; if(isNaN(c)||isNaN(d)) return; timeD.textContent=`${fmt(c)} / ${fmt(d)}`; updSeek(); });
+    function updateMS(t,a){ if('mediaSession' in navigator) navigator.mediaSession.metadata=new MediaMetadata({title:t,artist:a,artwork:[{src:'https://via.placeholder.com/512x512.png?text=MP',sizes:'512x512',type:'image/png'}]}); }
+    function togglePP(){ initAudioEngine(); if(audioCtx?.state==='suspended') audioCtx.resume(); if(!media.src&&playlist.length){ curIdx=0; radioMode=false; speedS.disabled=false; loadPlay(); return; } if(!media.src) return; if(media.paused) media.play().catch(()=>{}); else media.pause(); }
+    async function loadPlay(){ if(curIdx<0||curIdx>=playlist.length) return; initAudioEngine(); media.pause(); if(hls){ hls.destroy(); hls=null; } if(curUrl){ URL.revokeObjectURL(curUrl); curUrl=null; } const it=playlist[curIdx]; curUrl=URL.createObjectURL(it.file); media.src=curUrl; media.classList.toggle('active',it.type.startsWith('video/')); trackSt.textContent='Loading...'; trackTi.textContent=it.name; trackAr.textContent=it.type.startsWith('video/')?'Video File':'Audio File'; trackEx.textContent=`Format: ${it.type}`; updateMS(it.name, trackAr.textContent); readMeta(it.file); wavesurfer.load(curUrl); media.playbackRate=parseFloat(speedS.value); try{ await media.play(); } catch{ trackSt.textContent='Autoplay Blocked - Click Play'; } updPlUI(); }
+    function stopPlay(){ media.pause(); media.currentTime=0; playing=false; playBtn.innerHTML='<i class="fas fa-play"></i>'; trackSt.textContent='Stopped'; radioMode=false; speedS.disabled=false; }
+    async function playStream(url,name){ initAudioEngine(); media.pause(); if(hls){ hls.destroy(); hls=null; } if(curUrl){ URL.revokeObjectURL(curUrl); curUrl=null; } if(url.endsWith('.m3u8')||url.includes('m3u8')){ if(Hls.isSupported()){ hls=new Hls(); hls.loadSource(url); hls.attachMedia(media); hls.on(Hls.Events.MANIFEST_PARSED,()=>media.play()); } else if(media.canPlayType('application/vnd.apple.mpegurl')){ media.src=url; media.play(); } media.classList.add('active'); } else { media.src=url; media.crossOrigin='anonymous'; media.classList.remove('active'); media.play(); } trackSt.textContent='Streaming'; trackTi.textContent=name; trackAr.textContent='Live Content'; trackEx.textContent=''; updateMS(name,'Live'); radioMode=true; speedS.value='1'; speedS.disabled=true; }
+    radioS.onchange=e=>{ if(e.target.value) playStream(e.target.value, e.target.options[e.target.selectedIndex].text); };
+    document.getElementById('hlsTestBtn').onclick=()=>{ const url=document.getElementById('hlsInput').value; if(url) playStream(url,'Custom HLS'); };
+    function readMeta(f){ if(!f||!window.jsmediatags) return; window.jsmediatags.read(f,{ onSuccess:tag=>{ if(tag.tags.title) trackTi.textContent=tag.tags.title; if(tag.tags.artist) trackAr.textContent=`${tag.tags.artist}${tag.tags.album?' • '+tag.tags.album:''}`; updateMS(trackTi.textContent, trackAr.textContent); }, onError:()=>{} }); }
+    media.addEventListener('ended',()=>{ if(radioMode) return; if(curIdx<playlist.length-1){ curIdx++; loadPlay(); } else { stopPlay(); trackSt.textContent='Finished'; } });
+    media.addEventListener('play',()=>{ playing=true; playBtn.innerHTML='<i class="fas fa-pause"></i>'; if(trackSt.textContent!=='Streaming') trackSt.textContent='Playing'; if(audioCtx?.state==='suspended') audioCtx.resume(); });
+    media.addEventListener('pause',()=>{ playing=false; playBtn.innerHTML='<i class="fas fa-play"></i>'; if(trackSt.textContent!=='Streaming') trackSt.textContent='Paused'; });
+    function fmt(s){ if(isNaN(s)||!isFinite(s)) return'00:00'; const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.floor(s%60); return h>0?`${h}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`:`${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`; }
+    playBtn.onclick=togglePP; stopBtn.onclick=stopPlay;
+    prevBtn.onclick=()=>{ if(curIdx>0){ curIdx--; radioMode=false; speedS.disabled=false; loadPlay(); } };
+    nextBtn.onclick=()=>{ if(curIdx<playlist.length-1){ curIdx++; radioMode=false; speedS.disabled=false; loadPlay(); } };
+    if('mediaSession' in navigator){ navigator.mediaSession.setActionHandler('play',togglePP); navigator.mediaSession.setActionHandler('pause',togglePP); navigator.mediaSession.setActionHandler('previoustrack',()=>prevBtn.click()); navigator.mediaSession.setActionHandler('nexttrack',()=>nextBtn.click()); }
 
-    // ---------- STATE ----------
-    let playlist = [];
-    let currentIndex = -1;
-    let currentObjectURL = null;
-    let isPlaying = false;
-    let isRadioMode = false;
-    let isSeeking = false;
+    // ========== EQ ==========
+    const eqC=document.getElementById('eqSliders');
+    eqF.forEach((f,i)=>{ const w=document.createElement('div'); w.className='eq-slider'; w.innerHTML=`<div class="slider-wrap"><input type="range" min="-12" max="12" value="0" step="0.5"></div><label>${f>=1000?f/1000+'k':f}</label>`; const inp=w.querySelector('input'); inp.oninput=()=>{ const v=parseFloat(inp.value); if(filters[i]) filters[i].gain.value=v; eqGains[i]=v; document.getElementById('eqPreset').value='Custom'; }; eqC.appendChild(w); });
+    document.getElementById('eqPreset').onchange=e=>{ const g=pre[e.target.value]; if(!g) return; const inps=eqC.querySelectorAll('input'); g.forEach((v,i)=>{ inps[i].value=v; eqGains[i]=v; if(filters[i]) filters[i].gain.value=v; }); };
+    document.getElementById('savePresetBtn').onclick=()=>{ const n=prompt('Nama preset:'); if(n){ localStorage.setItem(`eq_${n}`,JSON.stringify(eqGains)); alert(`Preset "${n}" disimpan!`); } };
+    document.getElementById('loadPresetBtn').onclick=()=>{ const ks=Object.keys(localStorage).filter(k=>k.startsWith('eq_')); if(!ks.length){ alert('Belum ada preset.'); return; } const ch=prompt('Pilih preset:\n'+ks.map(k=>k.replace('eq_','')).join('\n')); if(ch&&localStorage.getItem(`eq_${ch}`)){ const g=JSON.parse(localStorage.getItem(`eq_${ch}`)); const inps=eqC.querySelectorAll('input'); g.forEach((v,i)=>{ inps[i].value=v; eqGains[i]=v; if(filters[i]) filters[i].gain.value=v; }); document.getElementById('eqPreset').value='Custom'; } };
 
-    function updatePlaylistUI() {
-      playlistContainer.innerHTML = '';
-      playlist.forEach((item, index) => {
-        const div = document.createElement('div');
-        div.className = `playlist-item ${index === currentIndex ? 'active' : ''}`;
-        const icon = item.type.startsWith('video') ? 'fa-video' : 'fa-music';
-        div.innerHTML = `<i class="fas ${icon}"></i><div class="item-name">${escapeHTML(item.name)}</div><div class="item-type">${item.type.split('/')[1] || 'file'}</div><div class="remove-btn"><i class="fas fa-times"></i></div>`;
-        div.querySelector('.remove-btn').onclick = async (e) => {
-          e.stopPropagation();
-          await deleteFileFromDB(item.id);
-          playlist.splice(index, 1);
-          if (index === currentIndex) { stopPlayback(); currentIndex = -1; }
-          else if (index < currentIndex) currentIndex--;
-          updatePlaylistUI();
-        };
-        div.onclick = () => {
-          if (index === currentIndex) {
-            togglePlayPause();
-            return;
-          }
-          currentIndex = index;
-          isRadioMode = false;
-          speedSelector.disabled = false;
-          loadAndPlay();
-        };
-        playlistContainer.appendChild(div);
-      });
+    // ========== VOL / PAN ==========
+    volS.oninput=()=>{ volV.textContent=volS.value+'%'; if(gainNode) gainNode.gain.value=volS.value/100; };
+    panS.oninput=()=>{ const v=parseFloat(panS.value); if(panNode) panNode.pan.value=v; panV.textContent=v<0?`L ${Math.abs(v).toFixed(1)}`:v>0?`R ${v.toFixed(1)}`:'0.0 C'; };
+    speedS.onchange=()=>{ if(!radioMode) media.playbackRate=parseFloat(speedS.value); };
+
+    // ========== AUDIO RECORDER (Mic+App) ==========
+    const recBtn=document.getElementById('recBtn'), saveRecBtn=document.getElementById('saveRecBtn');
+    let rec=false, recChunks=[], recTimer=null, recSec=0, mp3Blob=null, micStream=null, recNode=null, mixDest=null, playerMixed=false;
+    let workletLoaded=false;
+    async function loadWorklet(){ if(workletLoaded) return true; if(!audioCtx?.audioWorklet) return false; try{ const blob=new Blob([recorderWorkletCode],{type:'application/javascript'}); const url=URL.createObjectURL(blob); await audioCtx.audioWorklet.addModule(url); URL.revokeObjectURL(url); return workletLoaded=true; }catch(e){ console.warn('Worklet gagal:',e); return false; } }
+    async function startAudioRec(){ if(rec) return; initAudioEngine(); if(audioCtx.state==='suspended') await audioCtx.resume(); try{ micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); mixDest=audioCtx.createMediaStreamDestination(); if(!playerMixed){ gainNode.connect(mixDest); playerMixed=true; } const micSrc=audioCtx.createMediaStreamSource(micStream); micSrc.connect(mixDest); const mixed=audioCtx.createMediaStreamSource(mixDest.stream); recChunks=[]; recSec=0; if(await loadWorklet()){ recNode=new AudioWorkletNode(audioCtx,'recorder-processor'); mixed.connect(recNode); recNode.connect(audioCtx.destination); recNode.port.onmessage=e=>{ if(rec) recChunks.push(new Float32Array(e.data)); }; recNode.port.postMessage({command:'START'}); } else { recNode=audioCtx.createScriptProcessor(4096,1,1); mixed.connect(recNode); recNode.connect(audioCtx.destination); recNode.onaudioprocess=e=>{ if(!rec) return; recChunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); }; } rec=true; recBtn.classList.add('recording'); saveRecBtn.disabled=true; recTimer=setInterval(()=>{ recSec++; const m=Math.floor(recSec/60),s=recSec%60; recBtn.innerHTML=`<i class="fas fa-stop"></i> Stop ${m}:${s.toString().padStart(2,'0')}`; },1000); }catch(err){ alert('Gagal rekam: '+err.message); } }
+    async function stopAudioRec(){ if(!rec) return; clearInterval(recTimer); rec=false; if(recNode){ if(recNode.port) recNode.port.postMessage({command:'STOP'}); try{ recNode.disconnect(); }catch{} recNode=null; } recBtn.classList.remove('recording'); recBtn.innerHTML='<i class="fas fa-microphone"></i> Audio Rec'; if(micStream){ micStream.getTracks().forEach(t=>t.stop()); micStream=null; } if(playerMixed&&gainNode&&mixDest){ try{ gainNode.disconnect(mixDest); }catch{} playerMixed=false; } mixDest=null; if(!recChunks.length) return; const total=recChunks.reduce((a,c)=>a+c.length,0); const result=new Float32Array(total); let off=0; for(let c of recChunks){ result.set(c,off); off+=c.length; } recChunks=[]; const enc=new lamejs.Mp3Encoder(1,44100,128); const samples=new Int16Array(result.length); for(let i=0;i<result.length;i++){ let s=Math.max(-1,Math.min(1,result[i])); samples[i]=s<0?s*0x8000:s*0x7FFF; } const mp3D=[]; for(let i=0;i<samples.length;i+=1152){ const ch=enc.encodeBuffer(samples.subarray(i,i+1152)); if(ch.length) mp3D.push(ch); } const fl=enc.flush(); if(fl.length) mp3D.push(fl); mp3Blob=new Blob(mp3D,{type:'audio/mp3'}); saveRecBtn.disabled=false; }
+    recBtn.onclick=()=>{ rec?stopAudioRec():startAudioRec(); };
+    const downloadBlob=(blob,fn)=>{ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); };
+    saveRecBtn.onclick=()=>{ if(!mp3Blob) return; downloadBlob(mp3Blob,`Audio_Rec_${Date.now()}.mp3`); saveRecBtn.disabled=true; mp3Blob=null; };
+
+    // ========== SCREEN RECORDER (dari v21, disempurnakan) ==========
+    const scrBtn=document.getElementById('screenRecBtn'); let scrRec=null, scrChunks=[], scrDisp=null, scrMic=null, scrCtx=null, scrDest=null;
+    const hasScr=()=>!!(navigator.mediaDevices?.getDisplayMedia && typeof MediaRecorder!=='undefined');
+    const pickMime=()=>{ if(typeof MediaRecorder==='undefined') return''; const c=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm;codecs=vp8','video/webm']; return c.find(t=>MediaRecorder.isTypeSupported(t))||''; };
+    const resetScrUI=()=>{ scrBtn.classList.remove('recording'); scrBtn.innerHTML='<i class="fas fa-desktop"></i> Screen Recorder'; scrRec=null; };
+    const stopScrStreams=async()=>{ if(scrDisp){ scrDisp.getTracks().forEach(t=>t.stop()); scrDisp=null; } if(scrMic){ scrMic.getTracks().forEach(t=>t.stop()); scrMic=null; } if(scrCtx){ try{ await scrCtx.close(); }catch{} scrCtx=null; scrDest=null; } };
+    const cleanupScr=async()=>{ await stopScrStreams(); scrChunks=[]; resetScrUI(); };
+    async function startScrRec(){
+      if(!hasScr()){ alert('Screen recording tidak didukung.'); return; }
+      try{
+        scrDisp=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:{ideal:30}},audio:true});
+        const vTrack=scrDisp.getVideoTracks()[0]; if(!vTrack) throw new Error('Tidak ada track video.');
+        scrCtx=new (window.AudioContext||window.webkitAudioContext)(); if(scrCtx.state==='suspended') await scrCtx.resume();
+        scrDest=scrCtx.createMediaStreamDestination();
+        const mixAudio=s=>{ if(!s) return; const at=s.getAudioTracks(); if(!at.length) return; scrCtx.createMediaStreamSource(new MediaStream(at)).connect(scrDest); };
+        mixAudio(scrDisp);
+        try{ scrMic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}); mixAudio(scrMic); }catch{}
+        const combined=new MediaStream([vTrack,...scrDest.stream.getAudioTracks()]); const mime=pickMime();
+        scrRec=new MediaRecorder(combined,mime?{mimeType:mime}:undefined); scrChunks=[];
+        scrRec.ondataavailable=e=>{ if(e.data?.size) scrChunks.push(e.data); };
+        scrRec.onerror=e=>console.error(e);
+        vTrack.addEventListener('ended',()=>{ if(scrRec?.state==='recording') scrRec.stop(); },{once:true});
+        scrRec.onstop=async()=>{ try{ const blob=new Blob(scrChunks,{type:scrRec.mimeType||'video/webm'}); if(blob.size) downloadBlob(blob,`Screen_Rec_${Date.now()}.webm`); } finally { await cleanupScr(); } };
+        scrRec.start(1000); scrBtn.classList.add('recording'); scrBtn.innerHTML='<i class="fas fa-stop"></i> Stop Screen Rec';
+      } catch(err){ await cleanupScr(); alert('Screen Rec Error: '+(err?.message||err)); }
     }
-
-    function escapeHTML(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
-    function updateSeekBar() {
-      if (isSeeking) return;
-      const dur = media.duration;
-      if (!dur || !isFinite(dur)) { seekSlider.value = 0; return; }
-      seekSlider.value = (media.currentTime / dur) * 100;
-    }
-
-    seekSlider.oninput = () => {
-      const dur = media.duration;
-      if (!dur || !isFinite(dur)) return;
-      isSeeking = true;
-      media.currentTime = (seekSlider.value / 100) * dur;
-    };
-    seekSlider.onchange = () => { isSeeking = false; };
-
-    media.addEventListener('timeupdate', () => {
-      if (!media.src || media.readyState < 1) return;
-      const c = media.currentTime, d = media.duration;
-      if (isNaN(c) || isNaN(d)) return;
-      timeDisplay.textContent = `${format(c)} / ${format(d)}`;
-      updateSeekBar();
-    });
-
-    function updateMediaSession(title, artist) {
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: title,
-          artist: artist,
-          artwork: [{ src: 'https://via.placeholder.com/512x512.png?text=MiniPlayer', sizes: '512x512', type: 'image/png' }]
-        });
-      }
-    }
-
-    function togglePlayPause() {
-      initAudioEngine();
-      if (audioCtx?.state === 'suspended') audioCtx.resume();
-      if (!media.src && playlist.length > 0) {
-        currentIndex = 0;
-        isRadioMode = false;
-        speedSelector.disabled = false;
-        loadAndPlay();
-        return;
-      }
-      if (!media.src) return;
-      if (media.paused) media.play().catch(() => {});
-      else media.pause();
-    }
-
-    async function loadAndPlay() {
-      if (currentIndex < 0 || currentIndex >= playlist.length) return;
-      initAudioEngine();
-      if (audioCtx?.state === 'suspended') await audioCtx.resume();
-
-      media.pause();
-      if (currentObjectURL) { URL.revokeObjectURL(currentObjectURL); currentObjectURL = null; }
-
-      const item = playlist[currentIndex];
-      currentObjectURL = URL.createObjectURL(item.file);
-      media.src = currentObjectURL;
-
-      const isVid = item.type.startsWith('video/');
-      media.classList.toggle('active', isVid);
-
-      trackStatus.textContent = 'Loading...';
-      trackTitle.textContent = item.name;
-      trackArtist.textContent = isVid ? 'Video File' : 'Audio File';
-      try { trackExtra.textContent = `Format: ${item.type}`; } catch (e) { trackExtra.textContent = ''; }
-
-      updateMediaSession(trackTitle.textContent, trackArtist.textContent);
-      readMetadata(item.file);
-
-      wavesurfer.load(currentObjectURL);
-      media.playbackRate = parseFloat(speedSelector.value);
-
-      try {
-        await media.play();
-      } catch (err) {
-        trackStatus.textContent = 'Autoplay Blocked - Click Play';
-        isPlaying = false;
-        playBtn.innerHTML = '<i class="fas fa-play"></i>';
-      }
-      updatePlaylistUI();
-    }
-
-    function stopPlayback() {
-      media.pause();
-      media.currentTime = 0;
-      isPlaying = false;
-      playBtn.innerHTML = '<i class="fas fa-play"></i>';
-      trackStatus.textContent = 'Stopped';
-      isRadioMode = false;
-      speedSelector.disabled = false;
-    }
-
-    function playRadio(url) {
-      initAudioEngine();
-      if (audioCtx?.state === 'suspended') audioCtx.resume();
-
-      if (currentObjectURL) { URL.revokeObjectURL(currentObjectURL); currentObjectURL = null; }
-      media.src = url;
-      media.crossOrigin = 'anonymous';
-      media.classList.remove('active');
-
-      trackStatus.textContent = 'Streaming';
-      trackTitle.textContent = radioSelector.options[radioSelector.selectedIndex].text;
-      trackArtist.textContent = 'Online Radio';
-      trackExtra.textContent = '';
-
-      updateMediaSession(trackTitle.textContent, trackArtist.textContent);
-
-      media.playbackRate = 1;
-      speedSelector.value = '1';
-      speedSelector.disabled = true;
-      isRadioMode = true;
-
-      media.play().catch(() => trackStatus.textContent = 'Play Error / CORS Blocked');
-    }
-
-    function readMetadata(file) {
-      if (!file || !window.jsmediatags) return;
-      window.jsmediatags.read(file, {
-        onSuccess: (tag) => {
-          if (tag.tags.title) trackTitle.textContent = tag.tags.title;
-          if (tag.tags.artist) trackArtist.textContent = `${tag.tags.artist}${tag.tags.album ? ' • ' + tag.tags.album : ''}`;
-          let extra = '';
-          if (tag.tags.bitrate) extra += `Bitrate: ${tag.tags.bitrate} kbps `;
-          if (tag.tags.samplerate) extra += `Sample: ${tag.tags.samplerate} Hz`;
-          trackExtra.textContent = extra.trim();
-          updateMediaSession(trackTitle.textContent, trackArtist.textContent);
-        },
-        onError: () => {}
-      });
-    }
-
-    media.addEventListener('ended', () => {
-      if (isRadioMode) return;
-      if (currentIndex < playlist.length - 1) {
-        currentIndex++;
-        loadAndPlay();
-      } else {
-        trackStatus.textContent = 'Finished';
-        isPlaying = false;
-        playBtn.innerHTML = '<i class="fas fa-play"></i>';
-      }
-    });
-
-    media.addEventListener('play', () => {
-      isPlaying = true; playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-      if (trackStatus.textContent !== 'Streaming') trackStatus.textContent = 'Playing';
-    });
-    media.addEventListener('pause', () => {
-      isPlaying = false; playBtn.innerHTML = '<i class="fas fa-play"></i>';
-      if (trackStatus.textContent !== 'Streaming') trackStatus.textContent = 'Paused';
-    });
-
-    function format(s) {
-      if (isNaN(s) || !isFinite(s)) return '00:00';
-      const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = Math.floor(s%60);
-      if (h>0) return `${h}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
-      return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
-    }
-
-    playBtn.onclick = togglePlayPause;
-    stopBtn.onclick = stopPlayback;
-    prevBtn.onclick = () => {
-      if (currentIndex > 0) {
-        currentIndex--; isRadioMode = false; speedSelector.disabled = false; loadAndPlay();
-      }
-    };
-    nextBtn.onclick = () => {
-      if (currentIndex < playlist.length - 1) {
-        currentIndex++; isRadioMode = false; speedSelector.disabled = false; loadAndPlay();
-      }
-    };
-
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.setActionHandler('play', togglePlayPause);
-      navigator.mediaSession.setActionHandler('pause', togglePlayPause);
-      navigator.mediaSession.setActionHandler('previoustrack', () => prevBtn.click());
-      navigator.mediaSession.setActionHandler('nexttrack', () => nextBtn.click());
-    }
-
-    function updatePanDisplay() {
-      const val = parseFloat(panSlider.value);
-      panValue.textContent = val < 0 ? `L ${Math.abs(val).toFixed(1)}` : (val > 0 ? `R ${val.toFixed(1)}` : `0.0 C`);
-    }
-
-    volSlider.oninput = () => {
-      const v = volSlider.value;
-      volValue.textContent = v + '%';
-      if (gainNode) gainNode.gain.value = v/100;
-    };
-    panSlider.oninput = () => {
-      const v = parseFloat(panSlider.value);
-      if (panNode) panNode.pan.value = v;
-      updatePanDisplay();
-    };
-    updatePanDisplay();
-
-    speedSelector.onchange = () => {
-      if (!isRadioMode) media.playbackRate = parseFloat(speedSelector.value);
-    };
-
-    // EQ
-    const eqContainer = document.getElementById('eqSliders');
-    eqFreqs.forEach((f, i) => {
-      const wrap = document.createElement('div'); wrap.className = 'eq-slider';
-      wrap.innerHTML = `<div class="slider-wrap"><input type="range" min="-12" max="12" value="0" step="0.5"></div><label>${f>=1000?f/1000+'k':f}</label>`;
-      const input = wrap.querySelector('input');
-      input.oninput = () => { 
-        const v = parseFloat(input.value); 
-        if (filters[i]) filters[i].gain.value = v; 
-        currentEQGains[i] = v;
-        document.getElementById('eqPreset').value = 'Custom';
-      };
-      eqContainer.appendChild(wrap);
-    });
-
-    document.getElementById('eqPreset').onchange = (e) => {
-      const g = presets[e.target.value]; 
-      if (!g) return;
-      const inputs = eqContainer.querySelectorAll('input');
-      g.forEach((v,i) => { 
-        inputs[i].value = v; 
-        currentEQGains[i] = v; 
-        if (filters[i]) filters[i].gain.value = v; 
-      });
-    };
-
-    document.getElementById('savePresetBtn').onclick = () => {
-      const name = prompt("Nama preset custom Anda:", "My Preset");
-      if (name) {
-        localStorage.setItem(`eq_preset_${name}`, JSON.stringify(currentEQGains));
-        alert(`Preset "${name}" disimpan!`);
-      }
-    };
-
-    document.getElementById('loadPresetBtn').onclick = () => {
-      const keys = Object.keys(localStorage).filter(k => k.startsWith('eq_preset_'));
-      if (keys.length === 0) {
-        alert("Belum ada preset yang disimpan.");
-        return;
-      }
-      const names = keys.map(k => k.replace('eq_preset_', '')).join('\n');
-      const choice = prompt("Pilih preset:\n" + names);
-      if (choice && localStorage.getItem(`eq_preset_${choice}`)) {
-        const gains = JSON.parse(localStorage.getItem(`eq_preset_${choice}`));
-        const inputs = eqContainer.querySelectorAll('input');
-        gains.forEach((v, i) => {
-          inputs[i].value = v;
-          currentEQGains[i] = v;
-          if (filters[i]) filters[i].gain.value = v;
-        });
-        document.getElementById('eqPreset').value = 'Custom';
-      }
-    };
-
-    radioSelector.onchange = (e) => {
-      if (e.target.value) playRadio(e.target.value);
-    };
-
-    fileInput.onchange = async (e) => {
-      const files = Array.from(e.target.files);
-      if (!files.length) return;
-      for (const f of files) {
-        const id = await saveFileToDB(f);
-        playlist.push({ id, name: f.name, type: f.type, file: f });
-      }
-      if (currentIndex === -1) {
-        currentIndex = playlist.length - files.length;
-        isRadioMode = false;
-        speedSelector.disabled = false;
-        loadAndPlay();
-      } else updatePlaylistUI();
-      fileInput.value = '';
-    };
-
-    document.getElementById('clearPlaylist').onclick = async () => {
-      if (!confirm("Hapus semua lagu di playlist?")) return;
-      await clearAllFilesFromDB();
-      playlist = []; currentIndex = -1;
-      stopPlayback(); updatePlaylistUI();
-    };
-
-    async function loadPlaylistFromDB() {
-      const items = await getAllFilesFromDB();
-      playlist = items.map(item => ({ id: item.id, name: item.name, type: item.type, file: item.file }));
-      updatePlaylistUI();
-    }
-
-    // ========== AUDIO RECORDER (Mic + Suara Aplikasi) ==========
-    const recBtn = document.getElementById('recBtn');
-    const saveRecBtn = document.getElementById('saveRecBtn');
-    let recording = false;
-    let recChunks = [];
-    let recTimer = null;
-    let recSeconds = 0;
-    let mp3Blob = null;
-    let activeMicStream = null;
-    let mixDestination = null;
-    let recProcessor = null;
-    let playerConnectedToMixer = false;
-
-    async function startAudioRecording() {
-      if (recording) return;
-      initAudioEngine();
-      if (audioCtx.state === 'suspended') await audioCtx.resume();
-
-      try {
-        activeMicStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
-        mixDestination = audioCtx.createMediaStreamDestination();
-
-        // Sambungkan player ke mixer (hanya jika belum)
-        if (!playerConnectedToMixer) {
-          gainNode.connect(mixDestination);
-          playerConnectedToMixer = true;
-        }
-
-        // Sambungkan mic ke mixer
-        const micSource = audioCtx.createMediaStreamSource(activeMicStream);
-        micSource.connect(mixDestination);
-
-        recChunks = [];
-        recSeconds = 0;
-
-        recProcessor = audioCtx.createScriptProcessor(4096, 1, 1);
-        const mixedSource = audioCtx.createMediaStreamSource(mixDestination.stream);
-        mixedSource.connect(recProcessor);
-        recProcessor.connect(audioCtx.destination); // Required
-
-        recProcessor.onaudioprocess = (e) => {
-          if (!recording) return;
-          const data = e.inputBuffer.getChannelData(0);
-          recChunks.push(new Float32Array(data));
-        };
-
-        recording = true;
-        recBtn.classList.add('recording');
-        saveRecBtn.disabled = true;
-
-        recTimer = setInterval(() => {
-          recSeconds++;
-          const mins = Math.floor(recSeconds / 60);
-          const secs = recSeconds % 60;
-          recBtn.innerHTML = `<i class="fas fa-stop"></i> Stop ${mins}:${secs.toString().padStart(2,'0')}`;
-        }, 1000);
-      } catch (err) {
-        console.error('Recording error:', err);
-        alert('Gagal memulai rekaman. Pastikan izin mikrofon diberikan.');
-      }
-    }
-
-    async function stopAudioRecording() {
-      if (!recording) return;
-      clearInterval(recTimer);
-      recording = false;
-      recBtn.classList.remove('recording');
-      recBtn.innerHTML = '<i class="fas fa-microphone"></i> Audio Rec';
-
-      if (recProcessor) {
-        recProcessor.disconnect();
-        recProcessor = null;
-      }
-      if (activeMicStream) {
-        activeMicStream.getTracks().forEach(t => t.stop());
-        activeMicStream = null;
-      }
-      // Putuskan player dari mixer agar tidak terus terhubung
-      if (playerConnectedToMixer && gainNode && mixDestination) {
-        gainNode.disconnect(mixDestination);
-        playerConnectedToMixer = false;
-      }
-      mixDestination = null;
-
-      if (recChunks.length === 0) return;
-
-      const totalLen = recChunks.reduce((a, c) => a + c.length, 0);
-      const result = new Float32Array(totalLen);
-      let off = 0;
-      for (let c of recChunks) { result.set(c, off); off += c.length; }
-      recChunks = [];
-
-      const mp3enc = new lamejs.Mp3Encoder(1, 44100, 128);
-      const samples = new Int16Array(result.length);
-      for (let i = 0; i < result.length; i++) {
-        let s = Math.max(-1, Math.min(1, result[i]));
-        samples[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-      }
-
-      const mp3Data = [];
-      for (let i = 0; i < samples.length; i += 1152) {
-        const chunk = mp3enc.encodeBuffer(samples.subarray(i, i + 1152));
-        if (chunk.length) mp3Data.push(chunk);
-      }
-      const flush = mp3enc.flush();
-      if (flush.length) mp3Data.push(flush);
-
-      mp3Blob = new Blob(mp3Data, { type: 'audio/mp3' });
-      saveRecBtn.disabled = false;
-    }
-
-    recBtn.onclick = () => {
-      if (recording) stopAudioRecording();
-      else startAudioRecording();
-    };
-
-    saveRecBtn.onclick = () => {
-      if (!mp3Blob) return;
-      const a = document.createElement('a');
-      const url = URL.createObjectURL(mp3Blob);
-      a.href = url;
-      a.download = `Audio_Rec_${Date.now()}.mp3`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      saveRecBtn.disabled = true;
-      mp3Blob = null;
-    };
-
-    // ========== SCREEN RECORDER ==========
-    const screenRecBtn = document.getElementById('screenRecBtn');
-    let screenRecorder = null;
-    let screenChunks = [];
-
-    async function startScreenRecording() {
-      try {
-        const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-        let audioStream = null;
-        try {
-          audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        } catch(e) { console.log("Mic not available for screen rec"); }
-
-        const tracks = [...displayStream.getTracks()];
-        if (audioStream) tracks.push(...audioStream.getTracks());
-        
-        const combinedStream = new MediaStream(tracks);
-        const options = {};
-        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
-          options.mimeType = 'video/webm;codecs=vp9';
-        } else if (MediaRecorder.isTypeSupported('video/webm')) {
-          options.mimeType = 'video/webm';
-        }
-        screenRecorder = new MediaRecorder(combinedStream, options);
-        screenChunks = [];
-
-        screenRecorder.ondataavailable = (e) => { if (e.data.size > 0) screenChunks.push(e.data); };
-        screenRecorder.onstop = () => {
-          const blob = new Blob(screenChunks, { type: 'video/webm' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `Screen_Rec_${Date.now()}.webm`;
-          a.click();
-          displayStream.getTracks().forEach(t => t.stop());
-          if (audioStream) audioStream.getTracks().forEach(t => t.stop());
-          screenRecBtn.classList.remove('recording');
-          screenRecBtn.innerHTML = '<i class="fas fa-desktop"></i> Screen Recorder';
-        };
-
-        screenRecorder.start();
-        screenRecBtn.classList.add('recording');
-        screenRecBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Screen Rec';
-      } catch (err) {
-        console.error('Screen Rec error:', err);
-        alert('Gagal memulai Screen Recording.');
-      }
-    }
-
-    screenRecBtn.onclick = () => {
-      if (screenRecorder && screenRecorder.state === 'recording') screenRecorder.stop();
-      else startScreenRecording();
-    };
-
-    // ---------- CLOCK & WEATHER ----------
-    setInterval(() => document.getElementById('clock').textContent = new Date().toLocaleTimeString('id-ID',{hour12:false}), 1000);
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=3.5952&longitude=98.6722&current_weather=true&timezone=Asia/Jakarta')
-      .then(r=>r.json()).then(d=>{ document.querySelector('#weather span').textContent = d.current_weather.temperature+'°C'; }).catch(()=>{});
-
-    // ---------- INIT ----------
-    (async function init() {
-      await openDB();
-      await loadPlaylistFromDB();
-    })();
+    scrBtn.onclick=()=>{ if(scrRec?.state==='recording') scrRec.stop(); else startScrRec(); };
+    window.addEventListener('beforeunload',()=>{ if(scrRec?.state==='recording') try{ scrRec.stop(); }catch{} if(rec) try{ stopAudioRec(); }catch{} });
+
+    // ========== FILE INPUT ==========
+    fileInp.onchange=async e=>{ const fs=Array.from(e.target.files); if(!fs.length) return; for(const f of fs){ const id=await saveF(f); playlist.push({id,name:f.name,type:f.type,file:f}); } if(curIdx===-1){ curIdx=playlist.length-fs.length; loadPlay(); } else updPlUI(); fileInp.value=''; };
+    document.getElementById('clearPlaylist').onclick=async()=>{ if(confirm('Hapus playlist?')){ await clearF(); playlist=[]; curIdx=-1; stopPlay(); updPlUI(); } };
+
+    // ========== INIT ==========
+    setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleTimeString('id-ID',{hour12:false}),1000);
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=3.5952&longitude=98.6722&current_weather=true&timezone=Asia/Jakarta').then(r=>r.json()).then(d=>{ document.querySelector('#weather span').textContent=d.current_weather.temperature+'°C'; }).catch(()=>{});
+    (async()=>{ await openDB(); const items=await allF(); playlist=items.map(i=>({id:i.id,name:i.name,type:i.type,file:i.file})); updPlUI(); })();
   })();
 </script>
 </body>
