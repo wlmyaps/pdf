@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Super Player present by William Yap</title>
+  <title>Super Player v25 – Resurrection</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://unpkg.com/wavesurfer.js@7"></script>
@@ -13,7 +13,6 @@
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <style>
-    /* ... gaya yang sama persis dengan sebelumnya ... */
     :root {
       --bg-grad: linear-gradient(135deg, #0b0c10 0%, #15171c 100%);
       --glass: rgba(20, 22, 28, 0.85);
@@ -28,68 +27,52 @@
       --rec-red: #ff3b30;
       --playlist-bg: rgba(0, 0, 0, 0.2);
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-    body {
-      background: var(--bg-grad); color: var(--text); display: flex; justify-content: center;
-      min-height: 100vh; padding: 20px 10px; overflow-y: auto;
-    }
-
+    body { background: var(--bg-grad); color: var(--text); display: flex; justify-content: center; min-height: 100vh; padding: 20px 10px; overflow-y: auto; }
     #passwordOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-grad); backdrop-filter: blur(15px); display: flex; align-items: center; justify-content: center; z-index: 9999; flex-direction: column; }
     #passwordOverlay.hidden { display: none; }
     .lock-box { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
     .lock-box input { background: var(--btn); border: 1px solid var(--track); color: var(--text); padding: 10px; border-radius: 10px; width: 100%; margin: 15px 0; outline: none; font-size: 1rem; text-align: center; }
     .lock-box button { background: var(--accent); border: none; padding: 10px 20px; border-radius: 10px; color: #000; font-weight: bold; cursor: pointer; transition: 0.3s; }
     .lock-box button:hover { background: #fff; }
-
     .player-box { width: 450px; max-width: 100%; background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 24px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); border: 1px solid var(--glass-border); user-select: none; height: fit-content; margin: 0 auto; }
-
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--glass-border); }
     .clock { font-size: 1.1rem; font-weight: 700; color: var(--accent); font-family: 'Courier New', monospace; }
     .weather { font-size: 0.8rem; color: #a5d6a7; display: flex; align-items: center; gap: 5px; }
-
     .meta-info { text-align: center; margin-bottom: 15px; min-height: 60px; display: flex; flex-direction: column; justify-content: center; }
     .track-status { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 4px; font-weight: bold; }
     .track-title { font-weight: 700; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
     .track-artist { font-size: 0.8rem; color: var(--dim); margin-top: 2px; }
     .track-info-extra { font-size: 0.6rem; color: var(--dim); margin-top: 2px; }
-
     #videoPlayer { width: 100%; max-height: 200px; border-radius: 12px; background: #000; margin-bottom: 12px; display: none; object-fit: contain; border: 1px solid var(--glass-border); }
     #videoPlayer.active { display: block; }
-
     #waveform-container { position: relative; width: 100%; height: 120px; margin-bottom: 10px; border-radius: 12px; background: rgba(0,0,0,0.5); overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
     #waveform { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; opacity: 0.3; pointer-events: none; }
     #visualizer { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 2; pointer-events: none; display: block; }
     .viz-theme-select { position: absolute; top: 6px; right: 10px; z-index: 5; background: var(--btn); border: 1px solid var(--track); color: var(--text); padding: 2px 6px; border-radius: 5px; font-size: 0.6rem; cursor: pointer; outline: none; }
-
     .seek-container { width: 100%; margin-bottom: 10px; }
     .seek-container input[type=range] { width: 100%; height: 6px; background: var(--track); border-radius: 3px; appearance: none; cursor: pointer; outline: none; }
     .seek-container input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 8px var(--accent-glow); }
-
     .controls { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
     .controls button { width: 40px; height: 40px; border: none; background: var(--btn); color: var(--text); border-radius: 50%; cursor: pointer; font-size: 1rem; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
     .controls button#playBtn { width: 50px; height: 50px; font-size: 1.2rem; background: var(--accent); color: #000; box-shadow: 0 0 15px var(--accent-glow); }
     .controls button:hover { background: var(--btn-hover); transform: scale(1.05); }
     .controls button#playBtn:hover { background: #fff; transform: scale(1.1); }
     .time-display { flex: 1; text-align: right; font-family: 'Courier New', monospace; font-size: 0.85rem; color: var(--accent); font-weight: bold; }
-
     .knobs { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
     .knob-group { display: flex; flex-direction: column; gap: 6px; }
     .knob-group label { font-size: 0.7rem; color: var(--dim); display: flex; align-items: center; gap: 5px; justify-content: space-between; }
     .knob-group label span { color: var(--text); font-weight: 600; margin-left: 4px; }
     .knob-group input[type=range] { width: 100%; height: 5px; background: var(--track); border-radius: 5px; appearance: none; cursor: pointer; }
     .knob-group input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 8px var(--accent-glow); }
-
     .speed-control { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
     .speed-control label { font-size: 0.7rem; color: var(--dim); white-space: nowrap; }
     .speed-control select { flex: 1; background: var(--btn); color: var(--text); border: 1px solid var(--track); padding: 5px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; outline: none; }
     .speed-control select:disabled { opacity: 0.5; cursor: not-allowed; }
-
     .radio-section, .hls-tester-section { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--glass-border); }
     .radio-section select, .hls-tester-section input { width: 100%; background: var(--btn); color: var(--text); border: 1px solid var(--track); padding: 8px; border-radius: 8px; font-size: 0.85rem; outline: none; }
     .hls-tester-section { display: flex; flex-direction: column; gap: 8px; }
     .hls-tester-section button { background: var(--accent); border: none; padding: 8px; border-radius: 8px; color: #000; font-weight: bold; cursor: pointer; }
-
     .playlist-section { margin-top: 15px; border-top: 1px solid var(--glass-border); padding-top: 15px; }
     .playlist-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .playlist-header h3 { font-size: 0.9rem; color: var(--accent); display: flex; align-items: center; gap: 8px; }
@@ -101,7 +84,6 @@
     .playlist-item .item-type { font-size: 0.6rem; color: var(--dim); background: var(--btn); padding: 2px 5px; border-radius: 4px; }
     .playlist-item .remove-btn { color: var(--dim); cursor: pointer; padding: 5px; }
     .playlist-item .remove-btn:hover { color: var(--rec-red); }
-
     .eq-section { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--glass-border); }
     .eq-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .eq-header span { font-size: 0.8rem; color: var(--dim); }
@@ -113,23 +95,19 @@
     .slider-wrap input { appearance: none; width: 100%; height: 5px; background: var(--track); border-radius: 5px; outline: none; transform: rotate(-90deg); cursor: pointer; }
     .slider-wrap input::-webkit-slider-thumb { appearance: none; width: 10px; height: 10px; background: var(--accent); border-radius: 50%; }
     .eq-slider label { font-size: 0.6rem; color: var(--dim); margin-top: 5px; }
-
     .rec-section { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--glass-border); }
     .rec-section button, .screen-rec-section button { padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.8rem; transition: 0.3s; background: var(--btn); color: var(--text); display: flex; align-items: center; justify-content: center; gap: 8px; }
     #recBtn.recording, #screenRecBtn.recording { background: var(--rec-red); color: #fff; animation: pulse 1.5s infinite; }
     #saveRecBtn:disabled { opacity: 0.5; cursor: not-allowed; }
     .screen-rec-section { margin-top: 10px; }
     .screen-rec-section button { width: 100%; }
-
     .add-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; margin-top: 15px; background: var(--btn); border: 1px dashed var(--accent); border-radius: 10px; color: var(--accent); cursor: pointer; text-align: center; font-size: 0.85rem; transition: 0.3s; font-weight: 600; }
     .add-btn:hover { background: var(--btn-hover); border-style: solid; }
     .file-input { display: none; }
-
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--track); border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--dim); }
-
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
   </style>
 </head>
@@ -137,7 +115,7 @@
 
 <div id="passwordOverlay">
   <div class="lock-box">
-    <h2 style="color:var(--accent);"><i class="fas fa-lock"></i> Super Player present by William Yap</h2>
+    <h2 style="color:var(--accent);"><i class="fas fa-lock"></i> Super Player v25</h2>
     <input type="password" id="passInput" placeholder="Masukkan password" autofocus>
     <button id="unlockBtn">Buka</button>
     <p id="passError" style="color:var(--rec-red); font-size:0.7rem; margin-top:8px; display:none;">Password salah!</p>
@@ -152,8 +130,8 @@
 
   <div class="meta-info">
     <div class="track-status" id="trackStatus">Idle</div>
-    <div class="track-title" id="trackTitle">Selamat Datang di Pro Player</div>
-    <div class="track-artist" id="trackArtist">Buka file untuk memulai menggunakan Pro Player</div>
+    <div class="track-title" id="trackTitle">Selamat Datang</div>
+    <div class="track-artist" id="trackArtist">Buka file untuk memulai</div>
     <div class="track-info-extra" id="trackExtra"></div>
   </div>
 
@@ -205,7 +183,7 @@
 
   <div class="radio-section">
     <select id="radioSelector">
-      <option value="">?? Pilih Channel TV / Radio...</option>
+      <option value="">📺 Pilih Channel TV / Radio...</option>
       <optgroup label="TV Channels">
         <option value="https://pull.daaiplus.com/live-DAAIPLUS/live-DAAIPLUS_HD.m3u8">DAAI TV</option>
         <option value="https://live.cnbcindonesia.com/livecnbc/smil:cnbctv.smil/playlist.m3u8">CNBC Indonesia</option>
@@ -671,7 +649,7 @@
     async function loadPlay(){ if(curIdx<0||curIdx>=playlist.length) return; initAudioEngine(); media.pause(); if(hls){ hls.destroy(); hls=null; } if(streamAbort){ streamAbort.abort(); streamAbort=null; } if(curUrl){ URL.revokeObjectURL(curUrl); curUrl=null; } const it=playlist[curIdx]; curUrl=URL.createObjectURL(it.file); media.src=curUrl; media.classList.toggle('active',it.type.startsWith('video/')); trackSt.textContent='Loading...'; trackTi.textContent=it.name; trackAr.textContent=it.type.startsWith('video/')?'Video File':'Audio File'; trackEx.textContent=`Format: ${it.type}`; updateMS(it.name, trackAr.textContent); readMeta(it.file); wavesurfer.load(curUrl); media.playbackRate=parseFloat(speedS.value); try{ await media.play(); } catch{ trackSt.textContent='Autoplay Blocked - Click Play'; } updPlUI(); }
     function stopPlay(){ media.pause(); media.currentTime=0; playing=false; playBtn.innerHTML='<i class="fas fa-play"></i>'; trackSt.textContent='Stopped'; radioMode=false; speedS.disabled=false; if(hls){ hls.destroy(); hls=null; } if(streamAbort){ streamAbort.abort(); streamAbort=null; } }
 
-    // ========== PERBAIKAN HLS + RADIO ==========
+    // ========== PERBAIKAN UTAMA: playStream stabil ==========
     async function playStream(url, name) {
       initAudioEngine();
       if (audioCtx?.state === 'suspended') await audioCtx.resume();
@@ -685,7 +663,7 @@
       media.pause();
       media.removeAttribute('src');
       media.load();
-      media.crossOrigin = null; // hapus CORS dulu, baru nanti disetel jika perlu
+      media.crossOrigin = null;
       media.classList.remove('active');
 
       trackSt.textContent = 'Buffering...';
@@ -700,49 +678,50 @@
 
       try {
         if (url.endsWith('.m3u8') || url.includes('m3u8')) {
-          // Coba HLS.js dulu (tanpa CORS pada elemen video)
           if (Hls.isSupported()) {
-            hls = new Hls({ 
-              lowLatencyMode: false,
-              xhrSetup: function(xhr, url) {
-                xhr.withCredentials = false; // jangan kirim cookies
-                // Hapus referrer header untuk menghindari blokir
-                xhr.setRequestHeader('Referer', '');
-              }
-            });
+            hls = new Hls({ lowLatencyMode: false });
             hls.loadSource(url);
             hls.attachMedia(media);
-
+            
             await new Promise((resolve, reject) => {
-              hls.on(Hls.Events.MANIFEST_PARSED, () => {
+              const onManifest = () => {
+                hls.off(Hls.Events.MANIFEST_PARSED, onManifest);
+                hls.off(Hls.Events.ERROR, onError);
                 media.play().then(resolve).catch(reject);
-              });
-              hls.on(Hls.Events.ERROR, (event, data) => {
+              };
+              const onError = (event, data) => {
                 if (data.fatal) {
+                  hls.off(Hls.Events.MANIFEST_PARSED, onManifest);
+                  hls.off(Hls.Events.ERROR, onError);
                   hls.destroy();
                   hls = null;
-                  reject(new Error('HLS fatal error'));
+                  reject(new Error('HLS fatal'));
                 }
-              });
+              };
+              hls.on(Hls.Events.MANIFEST_PARSED, onManifest);
+              hls.on(Hls.Events.ERROR, onError);
+              
               streamAbort = new AbortController();
               streamAbort.signal.addEventListener('abort', () => {
+                hls.off(Hls.Events.MANIFEST_PARSED, onManifest);
+                hls.off(Hls.Events.ERROR, onError);
                 if (hls) { hls.destroy(); hls = null; }
                 reject(new Error('Aborted'));
               }, { once: true });
             });
+            media.classList.add('active');
           } else if (media.canPlayType('application/vnd.apple.mpegurl')) {
-            // Native HLS (iOS/Mac)
             media.src = url;
-            media.play();
+            await media.play();
+            media.classList.add('active');
           } else {
             throw new Error('HLS tidak didukung');
           }
-          media.classList.add('active');
         } else {
-          // Radio stream (AAC/MP3)
-          media.crossOrigin = 'anonymous'; // radio biasanya mendukung CORS
+          // Radio
+          media.crossOrigin = 'anonymous';
           media.src = url;
-          media.play();
+          await media.play();
         }
 
         trackSt.textContent = 'Streaming';
@@ -751,21 +730,8 @@
       } catch (err) {
         if (err.message === 'Aborted') return;
         console.error('Stream error:', err);
-        // Coba fallback native jika HLS.js gagal
-        if ((url.endsWith('.m3u8') || url.includes('m3u8')) && media.canPlayType('application/vnd.apple.mpegurl')) {
-          try {
-            media.src = url;
-            await media.play();
-            trackSt.textContent = 'Streaming';
-            playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-            playing = true;
-            return;
-          } catch (nativeErr) {
-            console.error('Native fallback juga gagal:', nativeErr);
-          }
-        }
         trackSt.textContent = 'Stream Error';
-        trackAr.textContent = 'Gagal memuat channel (CORS?)';
+        trackAr.textContent = 'Gagal memutar channel';
         playBtn.innerHTML = '<i class="fas fa-play"></i>';
         radioMode = false;
         speedS.disabled = false;
@@ -813,7 +779,7 @@
     const downloadBlob=(blob,fn)=>{ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); };
     saveRecBtn.onclick=()=>{ if(!mp3Blob) return; downloadBlob(mp3Blob,`Audio_Rec_${Date.now()}.mp3`); saveRecBtn.disabled=true; mp3Blob=null; };
 
-    // ========== SCREEN RECORDER ==========
+    // ========== SCREEN RECORDER (PC only) ==========
     const scrBtn=document.getElementById('screenRecBtn'); let scrRec=null, scrChunks=[], scrDisp=null, scrMic=null, scrCtx=null, scrDest=null;
     const hasScr=()=>!!(navigator.mediaDevices?.getDisplayMedia && typeof MediaRecorder!=='undefined');
     const pickMime=()=>{ if(typeof MediaRecorder==='undefined') return''; const c=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm;codecs=vp8','video/webm']; return c.find(t=>MediaRecorder.isTypeSupported(t))||''; };
