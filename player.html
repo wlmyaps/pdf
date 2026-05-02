@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Super Player by William Yap</title>
+  <title>Super Player Maha Karya William Yap</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://unpkg.com/wavesurfer.js@7"></script>
@@ -81,12 +81,12 @@
     #videoPlayer.active { display: block; }
 
     #waveform-container {
-      position: relative; width: 100%; height: 100px; margin-bottom: 10px; border-radius: 12px;
+      position: relative; width: 100%; height: 120px; margin-bottom: 10px; border-radius: 12px;
       background: rgba(0,0,0,0.5); overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
     }
     #waveform {
       width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1;
-      opacity: 0.2; pointer-events: none;
+      opacity: 0.3; pointer-events: none;
     }
     #visualizer {
       width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 2;
@@ -167,7 +167,8 @@
     .eq-section { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--glass-border); }
     .eq-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .eq-header span { font-size: 0.8rem; color: var(--dim); }
-    .eq-header select {
+    .eq-header-controls { display: flex; gap: 5px; }
+    .eq-header select, .eq-header button {
       background: var(--btn); color: var(--text); border: 1px solid var(--track); padding: 4px 8px;
       border-radius: 6px; font-size: 0.75rem; cursor: pointer;
     }
@@ -184,12 +185,15 @@
     .eq-slider label { font-size: 0.6rem; color: var(--dim); margin-top: 5px; }
 
     .rec-section { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--glass-border); }
-    .rec-section button {
+    .rec-section button, .screen-rec-section button {
       padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.8rem; transition: 0.3s;
       background: var(--btn); color: var(--text); display: flex; align-items: center; justify-content: center; gap: 8px;
     }
-    #recBtn.recording { background: var(--rec-red); color: #fff; animation: pulse 1.5s infinite; }
+    #recBtn.recording, #screenRecBtn.recording { background: var(--rec-red); color: #fff; animation: pulse 1.5s infinite; }
     #saveRecBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .screen-rec-section { margin-top: 10px; }
+    .screen-rec-section button { width: 100%; }
 
     .add-btn {
       display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -197,7 +201,7 @@
       border: 1px dashed var(--accent); border-radius: 10px; color: var(--accent); cursor: pointer;
       text-align: center; font-size: 0.85rem; transition: 0.3s; font-weight: 600;
     }
-    .add-btn:hover { background: rgba(0, 229, 255, 0.1); transform: translateY(-2px); }
+    .add-btn:hover { background: var(--btn-hover); border-style: solid; }
     .file-input { display: none; }
 
     ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -212,8 +216,8 @@
 
 <div id="passwordOverlay">
   <div class="lock-box">
-    <h2 style="color:var(--accent);"><i class="fas fa-lock"></i> Pro Player Maha Karya William Yap</h2>
-    <input type="password" id="passInput" placeholder="Masukkan password 12345" autofocus>
+    <h2 style="color:var(--accent);"><i class="fas fa-lock"></i> Super Player present by William Yap</h2>
+    <input type="password" id="passInput" placeholder="Masukkan password" autofocus>
     <button id="unlockBtn">Buka</button>
     <p id="passError" style="color:var(--rec-red); font-size:0.7rem; margin-top:8px; display:none;">Password salah!</p>
   </div>
@@ -227,8 +231,8 @@
 
   <div class="meta-info">
     <div class="track-status" id="trackStatus">Idle</div>
-    <div class="track-title" id="trackTitle">Selamat Datang di Pro Player Maha Karya William Yap</div>
-    <div class="track-artist" id="trackArtist">Buka file untuk memulai menggunakan Pro Palyer Maha Karya William Yap</div>
+    <div class="track-title" id="trackTitle">Super Player present by William Yap</div>
+    <div class="track-artist" id="trackArtist">Buka file untuk memulai</div>
     <div class="track-info-extra" id="trackExtra"></div>
   </div>
 
@@ -238,7 +242,8 @@
     <div id="waveform"></div>
     <canvas id="visualizer"></canvas>
     <select id="vizTheme" class="viz-theme-select">
-      <option value="classic">Classic</option>
+      <option value="spectrum">Spectrum</option>
+      <option value="classic">Classic Bars</option>
       <option value="rainbow">Rainbow</option>
       <option value="fire">Fire</option>
       <option value="ocean">Ocean</option>
@@ -311,21 +316,28 @@
   <div class="eq-section">
     <div class="eq-header">
       <span><i class="fas fa-sliders-h"></i> 10-Band EQ</span>
-      <select id="eqPreset">
-        <option value="Flat">Flat</option>
-        <option value="Full Bass">Full Bass</option>
-        <option value="Clear Vocal">Vocal</option>
-        <option value="Treble Boost">Treble</option>
-        <option value="Rock">Rock</option>
-        <option value="Electronic">Electronic</option>
-      </select>
+      <div class="eq-header-controls">
+        <select id="eqPreset">
+          <option value="Flat">Flat</option>
+          <option value="Full Bass">Full Bass</option>
+          <option value="Clear Vocal">Vocal</option>
+          <option value="Treble Boost">Treble</option>
+          <option value="Rock">Rock</option>
+          <option value="Electronic">Electronic</option>
+        </select>
+        <button id="savePresetBtn" title="Simpan Custom EQ"><i class="fas fa-save"></i></button>
+        <button id="loadPresetBtn" title="Muat Custom EQ"><i class="fas fa-folder-open"></i></button>
+      </div>
     </div>
     <div class="eq-sliders" id="eqSliders"></div>
   </div>
 
   <div class="rec-section">
-    <button id="recBtn"><i class="fas fa-microphone"></i> Record (Mic+App)</button>
+    <button id="recBtn"><i class="fas fa-microphone"></i> Audio Rec</button>
     <button id="saveRecBtn" disabled><i class="fas fa-save"></i> Save MP3</button>
+  </div>
+  <div class="screen-rec-section">
+    <button id="screenRecBtn"><i class="fas fa-desktop"></i> Screen Recorder</button>
   </div>
 
   <label class="add-btn" for="fileInput"><i class="fas fa-folder-open"></i> Tambah File ke Playlist</label>
@@ -335,7 +347,7 @@
 <script>
   (() => {
     // ---------- PASSWORD (SHA-256) ----------
-    const PASSWORD_HASH = '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5';
+    const PASSWORD_HASH = '904a181ff00a1323a28d23fdb7a6b3bf9d42b87a08e3c8710dc85915634239e1';
     const overlay = document.getElementById('passwordOverlay');
     const passInput = document.getElementById('passInput');
     const unlockBtn = document.getElementById('unlockBtn');
@@ -349,28 +361,23 @@
       return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    function unlockPlayer() {
-      overlay.classList.add('hidden');
-      playerBox.style.display = '';
-      sessionStorage.setItem('miniplayer_auth', '1');
-      // Inisialisasi audio engine saat user interaksi (mengatasi autoplay)
-      initAudioEngine();
-      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-      setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
-    }
-
-    async function checkPassword() {
+    async function unlockPlayer() {
       const inputHash = await sha256(passInput.value);
       if (inputHash === PASSWORD_HASH) {
-        unlockPlayer();
+        overlay.classList.add('hidden');
+        playerBox.style.display = '';
+        sessionStorage.setItem('miniplayer_auth', '1');
+        initAudioEngine();
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
       } else {
         passError.style.display = 'block';
       }
     }
 
-    unlockBtn.onclick = checkPassword;
+    unlockBtn.onclick = unlockPlayer;
     passInput.addEventListener('keypress', async (e) => {
-      if (e.key === 'Enter') checkPassword();
+      if (e.key === 'Enter') unlockPlayer();
     });
 
     if (sessionStorage.getItem('miniplayer_auth') === '1') {
@@ -458,7 +465,7 @@
     let filters = [];
     let animationId = null;
     let currentEQGains = new Array(eqFreqs.length).fill(0);
-    let vizTheme = 'classic';
+    let vizTheme = 'spectrum';
 
     const media = document.getElementById('videoPlayer');
     const playBtn = document.getElementById('playBtn');
@@ -488,7 +495,7 @@
       waveColor: 'rgba(0, 229, 255, 0.3)',
       progressColor: 'rgba(0, 229, 255, 0.5)',
       cursorColor: '#ff3b30',
-      height: 100,
+      height: 120,
       barWidth: 2, barRadius: 2, barGap: 1,
       plugins: [WaveSurfer.Hover.create({ lineColor: '#fff', lineWidth: 1, labelBackground: '#555' })]
     });
@@ -496,10 +503,8 @@
     function initAudioEngine() {
       if (audioCtx) return;
       try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
-        if (!sourceNode) {
-          sourceNode = audioCtx.createMediaElementSource(media);
-        }
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        sourceNode = audioCtx.createMediaElementSource(media);
         analyserNode = audioCtx.createAnalyser();
         analyserNode.fftSize = 512;
         compressorNode = audioCtx.createDynamicsCompressor();
@@ -508,6 +513,8 @@
         gainNode.gain.value = volSlider.value / 100;
         panNode.pan.value = parseFloat(panSlider.value);
 
+        // Routing: source -> analyser -> EQ -> compressor -> pan -> gain -> destination
+        sourceNode.connect(analyserNode);
         let prev = analyserNode;
         filters = [];
         eqFreqs.forEach((freq, i) => {
@@ -519,7 +526,6 @@
         compressorNode.connect(panNode);
         panNode.connect(gainNode);
         gainNode.connect(audioCtx.destination);
-        sourceNode.connect(analyserNode);
 
         startVisualizer();
       } catch (e) {
@@ -538,6 +544,9 @@
           break;
         case 'ocean':
           g.addColorStop(0, '#00aaff'); g.addColorStop(0.6, '#00ffff'); g.addColorStop(1, '#e0ffff');
+          break;
+        case 'spectrum':
+          g.addColorStop(0, '#00e5ff'); g.addColorStop(0.5, '#00ff88'); g.addColorStop(1, '#77ff00');
           break;
         case 'classic': default:
           g.addColorStop(0, '#005f73'); g.addColorStop(0.6, '#00e5ff'); g.addColorStop(1, '#ffffff');
@@ -559,15 +568,30 @@
         const h = visualizerCanvas.height;
         ctx.clearRect(0, 0, w, h);
         if (w === 0 || h === 0) return;
-        const barWidth = (w / bufferLength) * 2.5;
-        let x = 0;
-        ctx.fillStyle = getGradient(vizTheme, ctx, h);
-        for (let i = 0; i < bufferLength; i++) {
-          let multiplier = i < bufferLength / 4 ? 1.2 : 1.0;
-          let barHeight = (dataArray[i] / 255) * h * multiplier;
-          if (barHeight > h) barHeight = h;
-          ctx.fillRect(x, h - barHeight, barWidth - 1, barHeight);
-          x += barWidth;
+
+        if (vizTheme === 'spectrum') {
+          ctx.beginPath();
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = getGradient(vizTheme, ctx, h);
+          const sliceWidth = w / bufferLength;
+          let x = 0;
+          for (let i = 0; i < bufferLength; i++) {
+            const v = dataArray[i] / 255.0;
+            const y = h - (v * h);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+            x += sliceWidth;
+          }
+          ctx.stroke();
+        } else {
+          const barWidth = (w / bufferLength) * 2.5;
+          let x = 0;
+          ctx.fillStyle = getGradient(vizTheme, ctx, h);
+          for (let i = 0; i < bufferLength; i++) {
+            let barHeight = (dataArray[i] / 255) * h;
+            ctx.fillRect(x, h - barHeight, barWidth - 1, barHeight);
+            x += barWidth;
+          }
         }
       }
 
@@ -782,7 +806,7 @@
     });
     media.addEventListener('pause', () => {
       isPlaying = false; playBtn.innerHTML = '<i class="fas fa-play"></i>';
-      trackStatus.textContent = 'Paused';
+      if (trackStatus.textContent !== 'Streaming') trackStatus.textContent = 'Paused';
     });
 
     function format(s) {
@@ -808,8 +832,8 @@
     if ('mediaSession' in navigator) {
       navigator.mediaSession.setActionHandler('play', togglePlayPause);
       navigator.mediaSession.setActionHandler('pause', togglePlayPause);
-      navigator.mediaSession.setActionHandler('previoustrack', prevBtn.onclick);
-      navigator.mediaSession.setActionHandler('nexttrack', nextBtn.onclick);
+      navigator.mediaSession.setActionHandler('previoustrack', () => prevBtn.click());
+      navigator.mediaSession.setActionHandler('nexttrack', () => nextBtn.click());
     }
 
     function updatePanDisplay() {
@@ -839,12 +863,52 @@
       const wrap = document.createElement('div'); wrap.className = 'eq-slider';
       wrap.innerHTML = `<div class="slider-wrap"><input type="range" min="-12" max="12" value="0" step="0.5"></div><label>${f>=1000?f/1000+'k':f}</label>`;
       const input = wrap.querySelector('input');
-      input.oninput = () => { const v = parseFloat(input.value); if (filters[i]) filters[i].gain.value = v; currentEQGains[i] = v; };
+      input.oninput = () => { 
+        const v = parseFloat(input.value); 
+        if (filters[i]) filters[i].gain.value = v; 
+        currentEQGains[i] = v;
+        document.getElementById('eqPreset').value = 'Custom';
+      };
       eqContainer.appendChild(wrap);
     });
+
     document.getElementById('eqPreset').onchange = (e) => {
-      const g = presets[e.target.value]; const inputs = eqContainer.querySelectorAll('input');
-      g.forEach((v,i) => { inputs[i].value = v; currentEQGains[i] = v; if (filters[i]) filters[i].gain.value = v; });
+      const g = presets[e.target.value]; 
+      if (!g) return;
+      const inputs = eqContainer.querySelectorAll('input');
+      g.forEach((v,i) => { 
+        inputs[i].value = v; 
+        currentEQGains[i] = v; 
+        if (filters[i]) filters[i].gain.value = v; 
+      });
+    };
+
+    document.getElementById('savePresetBtn').onclick = () => {
+      const name = prompt("Nama preset custom Anda:", "My Preset");
+      if (name) {
+        localStorage.setItem(`eq_preset_${name}`, JSON.stringify(currentEQGains));
+        alert(`Preset "${name}" disimpan!`);
+      }
+    };
+
+    document.getElementById('loadPresetBtn').onclick = () => {
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('eq_preset_'));
+      if (keys.length === 0) {
+        alert("Belum ada preset yang disimpan.");
+        return;
+      }
+      const names = keys.map(k => k.replace('eq_preset_', '')).join('\n');
+      const choice = prompt("Pilih preset:\n" + names);
+      if (choice && localStorage.getItem(`eq_preset_${choice}`)) {
+        const gains = JSON.parse(localStorage.getItem(`eq_preset_${choice}`));
+        const inputs = eqContainer.querySelectorAll('input');
+        gains.forEach((v, i) => {
+          inputs[i].value = v;
+          currentEQGains[i] = v;
+          if (filters[i]) filters[i].gain.value = v;
+        });
+        document.getElementById('eqPreset').value = 'Custom';
+      }
     };
 
     radioSelector.onchange = (e) => {
@@ -868,6 +932,7 @@
     };
 
     document.getElementById('clearPlaylist').onclick = async () => {
+      if (!confirm("Hapus semua lagu di playlist?")) return;
       await clearAllFilesFromDB();
       playlist = []; currentIndex = -1;
       stopPlayback(); updatePlaylistUI();
@@ -879,20 +944,20 @@
       updatePlaylistUI();
     }
 
-    // ========== RECORDER (Mic + Suara Aplikasi) ==========
+    // ========== AUDIO RECORDER (Mic + Suara Aplikasi) ==========
     const recBtn = document.getElementById('recBtn');
     const saveRecBtn = document.getElementById('saveRecBtn');
     let recording = false;
-    let recProcessor = null;
     let recChunks = [];
     let recTimer = null;
     let recSeconds = 0;
     let mp3Blob = null;
     let activeMicStream = null;
     let mixDestination = null;
-    let dummyGain = null;
+    let recProcessor = null;
+    let playerConnectedToMixer = false;
 
-    async function startRecording() {
+    async function startAudioRecording() {
       if (recording) return;
       initAudioEngine();
       if (audioCtx.state === 'suspended') await audioCtx.resume();
@@ -900,9 +965,14 @@
       try {
         activeMicStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
         mixDestination = audioCtx.createMediaStreamDestination();
-        if (gainNode) {
+
+        // Sambungkan player ke mixer (hanya jika belum)
+        if (!playerConnectedToMixer) {
           gainNode.connect(mixDestination);
+          playerConnectedToMixer = true;
         }
+
+        // Sambungkan mic ke mixer
         const micSource = audioCtx.createMediaStreamSource(activeMicStream);
         micSource.connect(mixDestination);
 
@@ -911,12 +981,8 @@
 
         recProcessor = audioCtx.createScriptProcessor(4096, 1, 1);
         const mixedSource = audioCtx.createMediaStreamSource(mixDestination.stream);
-        dummyGain = audioCtx.createGain();
-        dummyGain.gain.value = 0;
-
         mixedSource.connect(recProcessor);
-        recProcessor.connect(dummyGain);
-        dummyGain.connect(audioCtx.destination);
+        recProcessor.connect(audioCtx.destination); // Required
 
         recProcessor.onaudioprocess = (e) => {
           if (!recording) return;
@@ -926,7 +992,6 @@
 
         recording = true;
         recBtn.classList.add('recording');
-        recBtn.innerHTML = '<i class="fas fa-microphone"></i> Rec (Mic+App)';
         saveRecBtn.disabled = true;
 
         recTimer = setInterval(() => {
@@ -936,32 +1001,34 @@
           recBtn.innerHTML = `<i class="fas fa-stop"></i> Stop ${mins}:${secs.toString().padStart(2,'0')}`;
         }, 1000);
       } catch (err) {
-        console.error('Mic error:', err);
-        alert('Izin mikrofon diperlukan untuk merekam.');
+        console.error('Recording error:', err);
+        alert('Gagal memulai rekaman. Pastikan izin mikrofon diberikan.');
       }
     }
 
-    async function stopRecording() {
+    async function stopAudioRecording() {
       if (!recording) return;
-      if (recTimer) { clearInterval(recTimer); recTimer = null; }
-      if (recProcessor) { recProcessor.disconnect(); recProcessor = null; }
-      if (dummyGain) { dummyGain.disconnect(); dummyGain = null; }
-      if (gainNode && mixDestination) {
-        try { gainNode.disconnect(mixDestination); } catch (e) {}
+      clearInterval(recTimer);
+      recording = false;
+      recBtn.classList.remove('recording');
+      recBtn.innerHTML = '<i class="fas fa-microphone"></i> Audio Rec';
+
+      if (recProcessor) {
+        recProcessor.disconnect();
+        recProcessor = null;
       }
       if (activeMicStream) {
         activeMicStream.getTracks().forEach(t => t.stop());
         activeMicStream = null;
       }
-      mixDestination = null;
-      recording = false;
-      recBtn.classList.remove('recording');
-      recBtn.innerHTML = '<i class="fas fa-microphone"></i> Record (Mic+App)';
-
-      if (recChunks.length === 0) {
-        alert('Tidak ada audio yang terekam.');
-        return;
+      // Putuskan player dari mixer agar tidak terus terhubung
+      if (playerConnectedToMixer && gainNode && mixDestination) {
+        gainNode.disconnect(mixDestination);
+        playerConnectedToMixer = false;
       }
+      mixDestination = null;
+
+      if (recChunks.length === 0) return;
 
       const totalLen = recChunks.reduce((a, c) => a + c.length, 0);
       const result = new Float32Array(totalLen);
@@ -986,12 +1053,11 @@
 
       mp3Blob = new Blob(mp3Data, { type: 'audio/mp3' });
       saveRecBtn.disabled = false;
-      saveRecBtn.innerHTML = '<i class="fas fa-save"></i> Save MP3';
     }
 
     recBtn.onclick = () => {
-      if (recording) stopRecording();
-      else startRecording();
+      if (recording) stopAudioRecording();
+      else startAudioRecording();
     };
 
     saveRecBtn.onclick = () => {
@@ -999,12 +1065,65 @@
       const a = document.createElement('a');
       const url = URL.createObjectURL(mp3Blob);
       a.href = url;
-      a.download = `Rekaman_MiniPlayer_${Date.now()}.mp3`;
+      a.download = `Audio_Rec_${Date.now()}.mp3`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       saveRecBtn.disabled = true;
-      saveRecBtn.innerHTML = '<i class="fas fa-check"></i> Tersimpan!';
       mp3Blob = null;
+    };
+
+    // ========== SCREEN RECORDER ==========
+    const screenRecBtn = document.getElementById('screenRecBtn');
+    let screenRecorder = null;
+    let screenChunks = [];
+
+    async function startScreenRecording() {
+      try {
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        let audioStream = null;
+        try {
+          audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch(e) { console.log("Mic not available for screen rec"); }
+
+        const tracks = [...displayStream.getTracks()];
+        if (audioStream) tracks.push(...audioStream.getTracks());
+        
+        const combinedStream = new MediaStream(tracks);
+        const options = {};
+        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+          options.mimeType = 'video/webm;codecs=vp9';
+        } else if (MediaRecorder.isTypeSupported('video/webm')) {
+          options.mimeType = 'video/webm';
+        }
+        screenRecorder = new MediaRecorder(combinedStream, options);
+        screenChunks = [];
+
+        screenRecorder.ondataavailable = (e) => { if (e.data.size > 0) screenChunks.push(e.data); };
+        screenRecorder.onstop = () => {
+          const blob = new Blob(screenChunks, { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Screen_Rec_${Date.now()}.webm`;
+          a.click();
+          displayStream.getTracks().forEach(t => t.stop());
+          if (audioStream) audioStream.getTracks().forEach(t => t.stop());
+          screenRecBtn.classList.remove('recording');
+          screenRecBtn.innerHTML = '<i class="fas fa-desktop"></i> Screen Recorder';
+        };
+
+        screenRecorder.start();
+        screenRecBtn.classList.add('recording');
+        screenRecBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Screen Rec';
+      } catch (err) {
+        console.error('Screen Rec error:', err);
+        alert('Gagal memulai Screen Recording.');
+      }
+    }
+
+    screenRecBtn.onclick = () => {
+      if (screenRecorder && screenRecorder.state === 'recording') screenRecorder.stop();
+      else startScreenRecording();
     };
 
     // ---------- CLOCK & WEATHER ----------
