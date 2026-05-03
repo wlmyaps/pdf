@@ -1,4 +1,4 @@
-name: Build and Deploy Player Kanda
+name: Deploy Player Kanda
 
 on:
   push:
@@ -20,14 +20,8 @@ jobs:
         with:
           node-version: 24
 
-      - name: Install dependencies
-        run: |
-          npm install
-          npm audit fix || true
-
       - name: Build project
-        run: |
-          echo "Player Kanda build complete ✅"
+        run: echo "Player Kanda build complete ✅"
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
