@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Player v25 – Resurrection</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://unpkg.com/wavesurfer.js@7"></script>
+  <script src="https://unpkg.com/wavesurfer.js@7/dist/plugins/hover.min.js"></script>
+  <script src="https://unpkg.com/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
+  <script src="https://unpkg.com/lamejs@1.2.0/lame.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+  <style>
+    :root {
+      --bg-grad: linear-gradient(135deg, #0b0c10 0%, #15171c 100%);
+      --glass: rgba(20, 22, 28, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --accent: #00e5ff;
+      --accent-glow: rgba(0, 229, 255, 0.4);
+      --text: #e0e0e0;
+      --dim: #8b92a5;
+      --track: #2a2d38;
+      --btn: #252830;
+      --btn-hover: #353842;
+      --rec-red: #ff3b30;
+      --playlist-bg: rgba(0, 0, 0, 0.2);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background: var(--bg-grad); color: var(--text); display: flex; justify-content: center; min-height: 100vh; padding: 20px 10px; overflow-y: auto; }
+    #passwordOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-grad); backdrop-filter: blur(15px); display: flex; align-items: center; justify-content: center; z-index: 9999; flex-direction: column; }
+    #passwordOverlay.hidden { display: none; }
+    .lock-box { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+    .lock-box input { background: var(--btn); border: 1px solid var(--track); color: var(--text); padding: 10px; border-radius: 10px; width: 100%; margin: 15px 0; outline: none; font-size: 1rem; text-align: center; }
+    .lock-box button { background: var(--accent); border: none; padding: 10px 20px; border-radius: 10px; color: #000; font-weight: bold; cursor: pointer; transition: 0.3s; }
+    .lock-box button:hover { background: #fff; }
+    .player-box { width: 450px; max-width: 100%; background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 24px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); border: 1px solid var(--glass-border); user-select: none; height: fit-content; margin: 0 auto; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--glass-border); }
+    .clock { font-size: 1.1rem; font-weight: 700; color: var(--accent); font-family: 'Courier New', monospace; }
+    .weather { font-size: 0.8rem; color: #a5d6a7; display: flex; align-items: center; gap: 5px; }
+    .meta-info { text-align: center; margin-bottom: 15px; min-height: 60px; display: flex; flex-direction: column; justify-content: center; }
+    .track-status { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 4px; font-weight: bold; }
+    .track-title { font-weight: 700; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
+    .track-artist { font-size: 0.8rem; color: var(--dim); margin-top: 2px; }
+    .track-info-extra { font-size: 0.6rem; color: var(--dim); margin-top: 2px; }
+    #videoPlayer { width: 100%; max-height: 200px; border-radius: 12px; background: #000; margin-bottom: 12px; display: none; object-fit: contain; border: 1px solid var(--glass-border); }
+    #videoPlayer.active { display: block; }
+    #waveform-container { position: relative; width: 100%; height: 120px; margin-bottom: 10px; border-radius: 12px; background: rgba(0,0,0,0.5); overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+    #waveform { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; opacity: 0.3; pointer-events: none; }
+    #visualizer { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 2; pointer-events: none; display: block; }
+    .viz-theme-select { position: absolute; top: 6px; right: 10px; z-index: 5; background: var(--btn); border: 1px solid var(--track); color: var(--text); padding: 2px 6px; border-radius: 5px; font-size: 0.6rem; cursor: pointer; outline: none; }
+    .seek-container { width: 100%; margin-bottom: 10px; }
+    .seek-container input[type=range] { width: 100%; height: 6px; background: var(--track); border-radius: 3px; appearance: none; cursor: pointer; outline: none; }
+    .seek-container input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 8px var(--accent-glow); }
+    .controls { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+    .controls button { width: 40px; height: 40px; border: none; background: var(--btn); color: var(--text); border-radius: 50%; cursor: pointer; font-size: 1rem; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
+    .controls button#playBtn { width: 50px; height: 50px; font-size: 1.2rem; background: var(--accent); color: #000; box-shadow: 0 0 15px var(--accent-glow); }
+    .controls button:hover { background: var(--btn-hover); transform: scale(1.05); }
+    .controls button#playBtn:hover { background: #fff; transform: scale(1.1); }
+    .time-display { flex: 1; text-align: right; font-family: 'Courier New', monospace; font-size: 0.85rem; color: var(--accent); font-weight: bold; }
+    .knobs { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+    .knob-group { display: flex; flex-direction: column; gap: 6px; }
+    .knob-group label { font-size: 0.7rem; color: var(--dim); display: flex; align-items: center; gap: 5px; justify-content: space-between; }
+    .knob-group label span { color: var(--text); font-weight: 600; margin-left: 4px; }
+    .knob-group input[type=range] { width: 100%; height: 5px; background: var(--track); border-radius: 5px; appearance: none; cursor: pointer; }
+    .knob-group input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 8px var(--accent-glow); }
+    .speed-control { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+    .speed-control label { font-size: 0.7rem; color: var(--dim); white-space: nowrap; }
+    .speed-control select { flex: 1; background: var(--btn); color: var(--text); border: 1px solid var(--track); padding: 5px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; outline: none; }
+    .speed-control select:disabled { opacity: 0.5; cursor: not-allowed; }
+    .radio-section, .hls-tester-section { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--glass-border); }
+    .radio-section select, .hls-tester-section input { width: 100%; background: var(--btn); color: var(--text); border: 1px solid var(--track); padding: 8px; border-radius: 8px; font-size: 0.85rem; outline: none; }
+    .hls-tester-section { display: flex; flex-direction: column; gap: 8px; }
+    .hls-tester-section button { background: var(--accent); border: none; padding: 8px; border-radius: 8px; color: #000; font-weight: bold; cursor: pointer; }
+    .playlist-section { margin-top: 15px; border-top: 1px solid var(--glass-border); padding-top: 15px; }
+    .playlist-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .playlist-header h3 { font-size: 0.9rem; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+    .playlist-container { max-height: 180px; overflow-y: auto; background: var(--playlist-bg); border-radius: 10px; padding: 5px; border: 1px solid rgba(255,255,255,0.05); }
+    .playlist-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; margin-bottom: 4px; cursor: pointer; transition: 0.2s; font-size: 0.8rem; }
+    .playlist-item:hover { background: rgba(255,255,255,0.05); }
+    .playlist-item.active { background: rgba(0, 229, 255, 0.15); border-left: 3px solid var(--accent); }
+    .playlist-item .item-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .playlist-item .item-type { font-size: 0.6rem; color: var(--dim); background: var(--btn); padding: 2px 5px; border-radius: 4px; }
+    .playlist-item .remove-btn { color: var(--dim); cursor: pointer; padding: 5px; }
+    .playlist-item .remove-btn:hover { color: var(--rec-red); }
+    .eq-section { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--glass-border); }
+    .eq-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .eq-header span { font-size: 0.8rem; color: var(--dim); }
+    .eq-header-controls { display: flex; gap: 5px; }
+    .eq-header select, .eq-header button { background: var(--btn); color: var(--text); border: 1px solid var(--track); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; }
+    .eq-sliders { display: flex; gap: 4px; justify-content: space-between; overflow-x: auto; padding-bottom: 10px; }
+    .eq-slider { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 30px; }
+    .slider-wrap { height: 80px; display: flex; align-items: center; width: 100%; }
+    .slider-wrap input { appearance: none; width: 100%; height: 5px; background: var(--track); border-radius: 5px; outline: none; transform: rotate(-90deg); cursor: pointer; }
+    .slider-wrap input::-webkit-slider-thumb { appearance: none; width: 10px; height: 10px; background: var(--accent); border-radius: 50%; }
+    .eq-slider label { font-size: 0.6rem; color: var(--dim); margin-top: 5px; }
+    .rec-section { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--glass-border); }
+    .rec-section button, .screen-rec-section button { padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.8rem; transition: 0.3s; background: var(--btn); color: var(--text); display: flex; align-items: center; justify-content: center; gap: 8px; }
+    #recBtn.recording, #screenRecBtn.recording { background: var(--rec-red); color: #fff; animation: pulse 1.5s infinite; }
+    #saveRecBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .screen-rec-section { margin-top: 10px; }
+    .screen-rec-section button { width: 100%; }
+    .add-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; margin-top: 15px; background: var(--btn); border: 1px dashed var(--accent); border-radius: 10px; color: var(--accent); cursor: pointer; text-align: center; font-size: 0.85rem; transition: 0.3s; font-weight: 600; }
+    .add-btn:hover { background: var(--btn-hover); border-style: solid; }
+    .file-input { display: none; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--track); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+  </style>
+</head>
+<body>
+
+<div id="passwordOverlay">
+  <div class="lock-box">
+    <h2 style="color:var(--accent);"><i class="fas fa-lock"></i> Super Player v25</h2>
+    <input type="password" id="passInput" placeholder="Masukkan password" autofocus>
+    <button id="unlockBtn">Buka</button>
+    <p id="passError" style="color:var(--rec-red); font-size:0.7rem; margin-top:8px; display:none;">Password salah!</p>
+  </div>
+</div>
+
+<div class="player-box" id="playerBox" style="display:none;">
+  <div class="header">
+    <div class="clock" id="clock">00:00:00</div>
+    <div class="weather" id="weather"><i class="fas fa-cloud-sun"></i> <span>--°C</span></div>
+  </div>
+
+  <div class="meta-info">
+    <div class="track-status" id="trackStatus">Idle</div>
+    <div class="track-title" id="trackTitle">Selamat Datang</div>
+    <div class="track-artist" id="trackArtist">Buka file untuk memulai</div>
+    <div class="track-info-extra" id="trackExtra"></div>
+  </div>
+
+  <video id="videoPlayer" controls playsinline></video>
+
+  <div id="waveform-container">
+    <div id="waveform"></div>
+    <canvas id="visualizer"></canvas>
+    <select id="vizTheme" class="viz-theme-select">
+      <option value="spectrum">Spectrum</option>
+      <option value="classic" selected>Classic Bars</option>
+      <option value="rainbow">Rainbow</option>
+      <option value="fire">Fire</option>
+      <option value="ocean">Ocean</option>
+    </select>
+  </div>
+
+  <div class="seek-container">
+    <input type="range" id="seekSlider" min="0" max="100" value="0" step="0.1">
+  </div>
+
+  <div class="controls">
+    <button id="prevBtn"><i class="fas fa-step-backward"></i></button>
+    <button id="playBtn"><i class="fas fa-play"></i></button>
+    <button id="stopBtn"><i class="fas fa-stop"></i></button>
+    <button id="nextBtn"><i class="fas fa-step-forward"></i></button>
+    <span class="time-display" id="timeDisplay">00:00 / 00:00</span>
+  </div>
+
+  <div class="knobs">
+    <div class="knob-group">
+      <label><i class="fas fa-volume-up"></i> Vol <span id="volValue">80%</span></label>
+      <input type="range" id="volSlider" min="0" max="100" value="80">
+    </div>
+    <div class="knob-group">
+      <label><i class="fas fa-arrows-alt-h"></i> Bal <span id="panValue">0.0 C</span></label>
+      <input type="range" id="panSlider" min="-1" max="1" step="0.1" value="0">
+    </div>
+  </div>
+
+  <div class="speed-control">
+    <label><i class="fas fa-tachometer-alt"></i> Speed:</label>
+    <select id="speedSelector">
+      <option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="0.75">0.75x</option>
+      <option value="1" selected>1.0x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option>
+      <option value="1.75">1.75x</option><option value="2">2.0x</option><option value="3">3.0x</option><option value="4">4.0x</option>
+    </select>
+  </div>
+
+  <div class="radio-section">
+    <select id="radioSelector">
+      <option value="">📺 Pilih Channel TV / Radio...</option>
+      <optgroup label="TV Channels">
+        <option value="https://pull.daaiplus.com/live-DAAIPLUS/live-DAAIPLUS_HD.m3u8">DAAI TV</option>
+        <option value="https://live.cnbcindonesia.com/livecnbc/smil:cnbctv.smil/playlist.m3u8">CNBC Indonesia</option>
+        <option value="https://op-group1-swiftservehd-1.dens.tv/h/h221/index.m3u8">DFC Food Channel</option>
+        <option value="https://hgmtv.com:19360/garudatvlivestreaming/720p.m3u8">Garuda TV</option>
+		<option value="https://live.cnnindonesia.com/livecnn/smil:cnntv.smil/playlist.m3u8">CNN TV</option>
+		<option value="https://i.mjh.nz/.r/sky-popup1.m3u8">ThreeNow Sport 1</option>
+		<option value="https://i.mjh.nz/.r/sky-hgtv.m3u8">HGTV</option>
+		<option value="https://i.mjh.nz/.r/sky-ptcn.m3u8">CNN Headlines International</option>
+		<option value="https://i.mjh.nz/.r/sky-ptms.m3u8">MovieSphere</option>
+		<option value="https://i.mjh.nz/.r/sky-fast3.m3u8">Below Deck Vault</option>
+		<option value="https://i.mjh.nz/.r/sky-ptmb.m3u8">MythBusters</option>
+		<option value="https://i.mjh.nz/.r/sky-fast4.m3u8">Warner Bros TV True Crime</option>
+		<option value="https://i.mjh.nz/.r/sky-fast5.m3u8">Warner Bros TV Paranormal</option>
+		<option value="https://i.mjh.nz/.r/sky-fast1.m3u8">Warner Bros TV Motorheads</option>
+		<option value="https://i.mjh.nz/.r/sky-fast2.m3u8">Warner Bros TV Deadliest Catch</option>
+		<option value="https://i.mjh.nz/.r/sky-fast6.m3u8">Warner Bros TV House Hunters</option>
+		<option value="https://i.mjh.nz/.r/mood-1290.m3u8">JuiceTV</option>
+		<option value="https://i.mjh.nz/.r/mood-1289.m3u8">J2</option>
+		<option value="https://i.mjh.nz/.r/mood-1286.m3u8">Big Rig</option>
+		<option value="https://i.mjh.nz/.r/mood-1288.m3u8">Melo</option>
+		<option value="https://i.mjh.nz/.r/mood-1287.m3u8">The Groat</option>
+		<option value="https://i.mjh.nz/.r/tvnz-1.m3u8">TVNZ 1</option>
+		<option value="https://i.mjh.nz/.r/tvnz-2.m3u8">TVNZ 2</option>
+		<option value="https://i.mjh.nz/.r/three.m3u8">Three</option>
+		<option value="https://i.mjh.nz/.r/bravo.m3u8">Bravo</option>
+		<option value="https://i.mjh.nz/.r/maori-tv.m3u8">Whakaata Maori</option>
+		<option value="https://i.mjh.nz/.r/tvnz-duke.m3u8">DUKE</option>
+		<option value="https://i.mjh.nz/.r/prime.m3u8">Sky Open</option>
+		<option value="https://i.mjh.nz/.r/rush-nz.m3u8">RUSH</option>
+		<option value="https://i.mjh.nz/.r/te-reo.m3u8">Te Reo</option>
+		<option value="https://i.mjh.nz/.r/three-plus1.m3u8">ThreePlus1</option>
+		<option value="https://i.mjh.nz/.r/bravo-plus1.m3u8">Bravo PLUS 1</option>
+		<option value="https://i.mjh.nz/.r/eden.m3u8">eden</option>
+		<option value="https://i.mjh.nz/.r/al-jazeera.m3u8">Al Jazeera</option>
+		<option value="https://i.mjh.nz/.r/trackside-1.m3u8">Trackside 1</option>
+		<option value="https://i.mjh.nz/.r/trackside-2.m3u8">Trackside 2</option>
+		<option value="https://i.mjh.nz/.r/shine-tv.m3u8">Shine TV</option>
+		<option value="https://i.mjh.nz/.r/firstlight.m3u8">Firstlight</option>
+		<option value="https://i.mjh.nz/.r/hope-channel.m3u8">Hope Channel</option>
+		<option value="https://i.mjh.nz/.r/parliament-tv.m3u8">Parliament TV</option>
+		<option value="https://i.mjh.nz/.r/wairarapa-tv.m3u8">Wairarapa TV</option>
+		<option value="https://i.mjh.nz/.r/ch200.m3u8">CH200</option>
+		<option value="https://i.mjh.nz/.r/trackside-premier.m3u8">Trackside Premier</option>
+		<option value="https://i.mjh.nz/.r/tvsn-shopping.m3u8">TVSN Shopping</option>
+		<option value="https://i.mjh.nz/.r/seven-syd.m3u8">Seven</option>
+		<option value="https://i.mjh.nz/.r/7two-syd.m3u8">7two</option>
+		<option value="https://i.mjh.nz/.r/7mate-syd.m3u8">7mate</option>
+		<option value="https://i.mjh.nz/.r/7flix-syd.m3u8">7flix</option>
+		<option value="https://i.mjh.nz/.r/channel-9-nsw.m3u8">Channel 9</option>
+		<option value="https://i.mjh.nz/.r/gem-nsw.m3u8">9Gem</option>
+		<option value="https://i.mjh.nz/.r/go-nsw.m3u8">9Go!</option>
+		<option value="https://i.mjh.nz/.r/life-nsw.m3u8">9Life</option>
+		<option value="https://i.mjh.nz/.r/rush-nsw.m3u8">9Rush</option>
+		<option value="https://i.mjh.nz/.r/channel-9-lismore.m3u8">Channel 9 (Norther Rivers)</option>
+		<option value="https://i.mjh.nz/.r/channel-9-newcastle.m3u8">Channel 9 (Newcastle)</option>
+		<option value="https://c.mjh.nz/abc-nsw.m3u8">ABC TV</option>
+		<option value="https://i.mjh.nz/.r/10-nsw.m3u8">10</option>
+		<option value="https://i.mjh.nz/.r/10bold-nsw.m3u8">10 Drama</option>
+		<option value="https://i.mjh.nz/.r/10peach-nsw.m3u8">10 Comedy</option>
+		<option value="https://i.mjh.nz/.r/10shake-nsw.m3u8">Nickelodeon</option>
+		<option value="https://i.mjh.nz/.r/snowy-mountains.m3u8">Snowy Mountains Television</option>
+		<option value="https://i.mjh.nz/.r/seven-mel.m3u8">Seven</option>
+		<option value="https://i.mjh.nz/.r/7two-mel.m3u8">7two</option>
+		<option value="https://i.mjh.nz/.r/7mate-mel.m3u8">7mate</option>
+		<option value="https://i.mjh.nz/.r/7flix-mel.m3u8">7flix</option>
+		<option value="https://i.mjh.nz/.r/channel-9-vic.m3u8">Channel 9</option>
+		<option value="https://i.mjh.nz/.r/gem-vic.m3u8">9Gem</option>
+		<option value="https://i.mjh.nz/.r/go-vic.m3u8">9Go!</option>
+		<option value="https://i.mjh.nz/.r/life-vic.m3u8">9Life</option>
+		<option value="https://i.mjh.nz/.r/rush-vic.m3u8">9Rush</option>
+		<option value="https://c.mjh.nz/abc-vic.m3u8">ABC TV</option>
+		<option value="https://i.mjh.nz/.r/10-vic.m3u8">10</option>
+		<option value="https://i.mjh.nz/.r/10bold-vic.m3u8">10 Drama</option>
+		<option value="https://i.mjh.nz/.r/10peach-vic.m3u8">10 Comedy</option>
+		<option value="https://i.mjh.nz/.r/10shake-vic.m3u8">Nickelodeon</option>
+		<option value="https://i.mjh.nz/.r/c31.m3u8">Channel 31</option>
+		<option value="https://i.mjh.nz/.r/seven-bri.m3u8">Seven</option>
+		<option value="https://i.mjh.nz/.r/7two-bri.m3u8">7two</option>
+		<option value="https://i.mjh.nz/.r/7mate-bri.m3u8">7mate</option>
+		<option value="https://i.mjh.nz/.r/7flix-bri.m3u8">7flix</option>
+		<option value="https://i.mjh.nz/.r/seven-cns.m3u8">Seven Cairns</option>
+		<option value="https://i.mjh.nz/.r/7flix-regional.m3u8">7flix Regional</option>
+		<option value="https://i.mjh.nz/.r/7two-regional.m3u8">7two Regional</option>
+		<option value="https://i.mjh.nz/.r/7mate-regional.m3u8">7mate Regional</option>
+		<option value="https://i.mjh.nz/.r/seven-mky.m3u8">Seven Mackay</option>
+		<option value="https://i.mjh.nz/.r/seven-ssc.m3u8">Seven Sunshine Coast</option>
+		<option value="https://i.mjh.nz/.r/seven-rky.m3u8">Seven Rockhampton</option>
+		<option value="https://i.mjh.nz/.r/seven-twb.m3u8">Seven Toowoomba</option>
+		<option value="https://i.mjh.nz/.r/seven-tsv.m3u8">Seven Townsville</option>
+		<option value="https://i.mjh.nz/.r/seven-wby.m3u8">Seven Wide Bay</option>
+		<option value="https://i.mjh.nz/.r/channel-9-qld.m3u8">Channel 9</option>
+		<option value="https://i.mjh.nz/.r/gem-qld.m3u8">9Gem</option>
+		<option value="https://i.mjh.nz/.r/go-qld.m3u8">9Go!</option>
+		<option value="https://i.mjh.nz/.r/life-qld.m3u8">9Life</option>
+		<option value="https://i.mjh.nz/.r/rush-qld.m3u8">9Rush</option>
+		<option value="https://i.mjh.nz/.r/channel-9-gold-coast.m3u8">Channel 9 (Gold Coast)</option>
+		<option value="https://c.mjh.nz/abc-qld.m3u8">ABC TV</option>
+		<option value="https://i.mjh.nz/.r/10-qld.m3u8">10</option>
+		<option value="https://i.mjh.nz/.r/10bold-qld.m3u8">10 Drama</option>
+		<option value="https://i.mjh.nz/.r/10peach-qld.m3u8">10 Comedy</option>
+		<option value="https://i.mjh.nz/.r/10shake-qld.m3u8">Nickelodeon</option>
+		<option value="https://i.mjh.nz/.r/seven-per.m3u8">Seven</option>
+		<option value="https://i.mjh.nz/.r/7two-per.m3u8">7two</option>
+		<option value="https://i.mjh.nz/.r/7mate-per.m3u8">7mate</option>
+		<option value="https://i.mjh.nz/.r/7flix-per.m3u8">7flix</option>
+		<option value="https://i.mjh.nz/.r/channel-9-wa.m3u8">Channel 9</option>
+		<option value="https://i.mjh.nz/.r/gem-wa.m3u8">9Gem</option>
+		<option value="https://i.mjh.nz/.r/go-wa.m3u8">9Go!</option>
+		<option value="https://i.mjh.nz/.r/life-wa.m3u8">9Life</option>
+		<option value="https://i.mjh.nz/.r/rush-wa.m3u8">9Rush</option>
+		<option value="https://c.mjh.nz/abc-wa.m3u8">ABC TV</option>
+		<option value="https://i.mjh.nz/.r/10-wa.m3u8">10</option>
+		<option value="https://i.mjh.nz/.r/10bold-wa.m3u8">10 Drama</option>
+		<option value="https://i.mjh.nz/.r/10peach-wa.m3u8">10 Comedy</option>
+		<option value="https://i.mjh.nz/.r/10shake-wa.m3u8">Nickelodeon</option>
+		<option value="https://i.mjh.nz/.r/seven-ade.m3u8">Seven</option>
+		<option value="https://i.mjh.nz/.r/7two-ade.m3u8">7two</option>
+		<option value="https://i.mjh.nz/.r/7mate-ade.m3u8">7mate</option>
+		<option value="https://i.mjh.nz/.r/7flix-ade.m3u8">7flix</option>
+		<option value="https://i.mjh.nz/.r/channel-9-sa.m3u8">Channel 9</option>
+		<option value="https://i.mjh.nz/.r/gem-sa.m3u8">9Gem</option>
+		<option value="https://i.mjh.nz/.r/go-sa.m3u8">9Go!</option>
+		<option value="https://i.mjh.nz/.r/life-sa.m3u8">9Life</option>
+		<option value="https://i.mjh.nz/.r/rush-sa.m3u8">9Rush</option>
+		<option value="https://c.mjh.nz/abc-sa.m3u8">ABC TV</option>
+		<option value="https://i.mjh.nz/.r/10-sa.m3u8">10</option>
+		<option value="https://i.mjh.nz/.r/10bold-sa.m3u8">10 Drama</option>
+		<option value="https://i.mjh.nz/.r/10peach-sa.m3u8">10 Comedy</option>
+		<option value="https://i.mjh.nz/.r/10shake-sa.m3u8">Nickelodeon</option>
+		<option value="https://i.mjh.nz/.r/c44.m3u8">Channel 44</option>
+		<option value="https://c.mjh.nz/abc-act.m3u8">ABC TV</option>
+		<option value="https://c.mjh.nz/abc-nt.m3u8">ABC TV</option>
+		<option value="https://i.mjh.nz/.r/first-nations-tv.m3u8">First Nations TV</option>
+		<option value="https://i.mjh.nz/.r/tourism-tv.m3u8">Tourism TV</option>
+		<option value="https://c.mjh.nz/abc-tas.m3u8">ABC TV</option>
+		<option value="https://i.mjh.nz/.r/bordersecurityaustralia-fast.m3u8">Border Security Australia</option>
+		<option value="https://i.mjh.nz/.r/racing-fast.m3u8">Racing.com</option>
+		<option value="https://i.mjh.nz/.r/ausbiz-fast.m3u8">ausbiz</option>
+		<option value="https://i.mjh.nz/.r/hardcorepawn-fast.m3u8">Hardcore Pawn</option>
+		<option value="https://i.mjh.nz/.r/racingwa-fast.m3u8">Racing WA</option>
+		<option value="https://i.mjh.nz/.r/allsaints-fast.m3u8">All Saints</option>
+		<option value="https://i.mjh.nz/.r/mythbusters-fast.m3u8">Mythbusters</option>
+		<option value="https://i.mjh.nz/.r/travelaus-fast.m3u8">Travel Australia</option>
+		<option value="https://i.mjh.nz/.r/aircrashinvestigations-fast.m3u8">Air Crash Investigations</option>
+		<option value="https://i.mjh.nz/.r/betterhomesandgardens-fast.m3u8">Better Homes And Gardens</option>
+		<option value="https://i.mjh.nz/.r/cas33-fast.m3u8">The Yorkshire Vet</option>
+		<option value="https://i.mjh.nz/.r/csicrimesceneinvestigation-fast.m3u8">CSI Crime Scene Investigation</option>
+		<option value="https://i.mjh.nz/.r/mightymachines-fast.m3u8">Mighty Machines</option>
+		<option value="https://i.mjh.nz/.r/cas21-fast.m3u8">Ghost Hunters</option>
+		<option value="https://i.mjh.nz/.r/onthecase-fast.m3u8">On The Case</option>
+		<option value="https://i.mjh.nz/.r/cas24-fast.m3u8">Bondi Vet</option>
+		<option value="https://i.mjh.nz/.r/cas25-fast.m3u8">Australia's Got Talent</option>
+		<option value="https://i.mjh.nz/.r/cas26-fast.m3u8">Home and Away Classics</option>
+		<option value="https://i.mjh.nz/.r/7now-fast.m3u8">7now</option>
+		<option value="https://i.mjh.nz/.r/livgolfreplays-fast.m3u8">LIV Golf Replays</option>
+		<option value="https://i.mjh.nz/.r/cas29-fast.m3u8">Cooking & Culture</option>
+		<option value="https://i.mjh.nz/.r/waterrats-fast.m3u8">Water Rats</option>
+		<option value="https://i.mjh.nz/.r/7afl-fast.m3u8">7AFL</option>
+		<option value="https://i.mjh.nz/.r/cas32-fast.m3u8">7NEWS Spotlight</option>
+		<option value="https://i.mjh.nz/.r/wtn-fast.m3u8">Wicked Tuna</option>
+		<option value="https://i.mjh.nz/.r/winnersnlosers-fast.m3u8">Winners and Losers</option>
+		<option value="https://i.mjh.nz/.r/surveillancecentral-fast.m3u8">Surveillance Central</option>
+		<option value="https://i.mjh.nz/.r/outbacktruckers-fast.m3u8">Outback Truckers</option>
+		<option value="https://i.mjh.nz/.r/anglersparadise-fast.m3u8">Anglers Paradise</option>
+		<option value="https://i.mjh.nz/.r/truckinghell-fast.m3u8">Trucking Hell</option>
+		<option value="https://i.mjh.nz/.r/judgejudy-fast.m3u8">Judge Judy</option>
+		<option value="https://i.mjh.nz/.r/all-starcinema-fast.m3u8">All-Star Cinema</option>
+		<option value="https://i.mjh.nz/.r/bluelight-fast.m3u8">Blue Light</option>
+		<option value="https://i.mjh.nz/.r/medicalnrescue-fast.m3u8">Medical And Rescue</option>
+		<option value="https://i.mjh.nz/.r/blueheelers-fast.m3u8">Blue Heelers</option>
+		<option value="https://i.mjh.nz/.r/acountrypractice-fast.m3u8">A Country Practice</option>
+		<option value="https://i.mjh.nz/.r/truecrimefiles-fast.m3u8">True Crime Files</option>
+		<option value="https://i.mjh.nz/.r/art-fast.m3u8">Antiques Road Trip</option>
+		<option value="https://i.mjh.nz/.r/rmc-fast.m3u8">River Monsters</option>
+		<option value="https://i.mjh.nz/.r/7bravo-fast.m3u8">7Bravo</option>
+		<option value="https://i.mjh.nz/.r/heki-fast.m3u8">Hells Kitchen</option>
+		<option value="https://i.mjh.nz/.r/taste-fast.m3u8">Taste</option>
+		<option value="https://i.mjh.nz/.r/belowdeckvault-fast.m3u8">Below Deck Vault</option>
+		<option value="https://i.mjh.nz/.r/tvsn-fast.m3u8">TVSN</option>
+		<option value="https://i.mjh.nz/.r/etc-fast.m3u8">Escape to the Country</option>
+		<option value="https://i.mjh.nz/.r/therealhousewivesvault-fast.m3u8">The Real Housewives VAULT</option>
+		<option value="https://i.mjh.nz/.r/cricketgold-fast.m3u8">Cricket Gold</option>
+		<option value="https://i.mjh.nz/.r/botchedvault-fast.m3u8">Botched VAULT</option>
+		<option value="https://i.mjh.nz/.r/ncis-fast.m3u8">NCIS</option>
+		<option value="https://i.mjh.nz/.r/cas39-fast.m3u8">24 Hours in A&E</option>
+		<option value="https://i.mjh.nz/.r/cas40-fast.m3u8">Million Dollar Listing VAULT</option>
+		<option value="https://i.mjh.nz/.r/cas41-fast.m3u8">Bondi Rescue</option>
+		<option value="https://i.mjh.nz/.r/bbc-news-fast.m3u8">BBC News</option>
+		<option value="https://i.mjh.nz/.r/seinfeld-fast.m3u8">Seinfeld</option>
+		<option value="https://i.mjh.nz/.r/9crime-fast.m3u8">9Crime</option>
+		<option value="https://i.mjh.nz/.r/married-at-first-sight-fast.m3u8">Married At First Sight</option>
+		<option value="https://i.mjh.nz/.r/9mysteryparanormal-fast.m3u8">9Mystery&Paranormal</option>
+		<option value="https://i.mjh.nz/.r/bbc-top-gear-247-fast.m3u8">BBC Top Gear</option>
+		<option value="https://i.mjh.nz/.r/dance-moms-247-fast.m3u8">Dance Moms 24/7</option>
+		<option value="https://i.mjh.nz/.r/lmn-fast.m3u8">LMN</option>
+		<option value="https://i.mjh.nz/.r/real-emergency-fast.m3u8">Real Emergency</option>
+		<option value="https://i.mjh.nz/.r/the-block-247-fast.m3u8">The Block 24/7</option>
+		<option value="https://i.mjh.nz/.r/h2-fast.m3u8">H2</option>
+		<option value="https://i.mjh.nz/.r/60-minutes-australia-fast.m3u8">60 Minutes Australia</option>
+		<option value="https://i.mjh.nz/.r/drive-fast.m3u8">Drive</option>
+		<option value="https://i.mjh.nz/.r/bbc-antiques-roadshow-247-fast.m3u8">BBC Antiques Roadshow</option>
+		<option value="https://i.mjh.nz/.r/bbc-comedy-fast.m3u8">BBC Comedy</option>
+		<option value="https://i.mjh.nz/.r/bbc-home-garden-fast.m3u8">BBC Home & Garden</option>
+		<option value="https://i.mjh.nz/.r/bbc-food-fast.m3u8">BBC Food</option>
+		<option value="https://i.mjh.nz/.r/qrl-hostplus-cup-2026-fast.m3u8">QRL Hostplus Cup 2026</option>
+		<option value="https://i.mjh.nz/.r/10-undercoverboss.m3u8">Undercover Boss</option>
+		<option value="https://i.mjh.nz/.r/10-true-stories.m3u8">True Stories</option>
+		<option value="https://i.mjh.nz/.r/10-haveyoubeenpayingattention.m3u8">Have You Been Paying Attention?</option>
+		<option value="https://i.mjh.nz/.r/10-heartland.m3u8">Heartland</option>
+		<option value="https://i.mjh.nz/.r/10-cheapseats.m3u8">The Cheap Seats</option>
+		<option value="https://i.mjh.nz/.r/10-eightoutof10cats.m3u8">8 Out Of 10 Cats</option>
+		<option value="https://i.mjh.nz/.r/10-mtvridiculousness.m3u8">MTV Ridiculousness</option>
+		<option value="https://i.mjh.nz/.r/10-thankgodyourehere.m3u8">Thank God You're Here</option>
+		<option value="https://i.mjh.nz/.r/10-south-park.m3u8">South Park</option>
+		<option value="https://i.mjh.nz/.r/10-adultanimation.m3u8">Adult Animation</option>
+		<option value="https://i.mjh.nz/.r/10-becker.m3u8">Becker</option>
+		<option value="https://i.mjh.nz/.r/10-rookieblue.m3u8">rookie-blue</option>
+		<option value="https://i.mjh.nz/.r/10-demanddrama.m3u8">Demand Drama</option>
+		<option value="https://i.mjh.nz/.r/10-prisoner-cell-block-h.m3u8">Prisoner: Cell Block H</option>
+		<option value="https://i.mjh.nz/.r/10-the-twilight-zone.m3u8">The Twilight Zone</option>
+		<option value="https://i.mjh.nz/.r/10-diagnosismurder.m3u8">Diagnosis Murder</option>
+		<option value="https://i.mjh.nz/.r/10-americas-next-top-model.m3u8">America's Next Top Model</option>
+		<option value="https://i.mjh.nz/.r/10-australias-next-top-model.m3u8">Australia's Next Top Model</option>
+		<option value="https://i.mjh.nz/.r/10-masterchef.m3u8">MasterChef</option>
+		<option value="https://i.mjh.nz/.r/10-world-of-survivor.m3u8">World Of Survivor</option>
+		<option value="https://i.mjh.nz/.r/10-twentyfoursevengameshows.m3u8">24/7 Gameshows</option>
+		<option value="https://i.mjh.nz/.r/10-theonlywayisessex.m3u8">The Only Way Is Essex</option>
+		<option value="https://i.mjh.nz/.r/10-mtvgeordieshore.m3u8">MTV Geordie Shore</option>
+		<option value="https://i.mjh.nz/.r/10-mtv-jersey-shore.m3u8">MTV Jersey Shore</option>
+		<option value="https://i.mjh.nz/.r/10-mtv-reality.m3u8">MTV Reality</option>
+		<option value="https://i.mjh.nz/.r/10-hardcorepawn.m3u8">Hardcore Pawn</option>
+		<option value="https://i.mjh.nz/.r/10-wicked-tuna.m3u8">Wicked Tuna</option>
+		<option value="https://i.mjh.nz/.r/10-embarrassing-bodies.m3u8">Embarrassing Bodies</option>
+		<option value="https://i.mjh.nz/.r/10-highwaythruhell.m3u8">Highway Thru Hell</option>
+		<option value="https://i.mjh.nz/.r/10-cops.m3u8">COPS</option>
+		<option value="https://i.mjh.nz/.r/10-medical-emergency.m3u8">Medical Emergency</option>
+		<option value="https://i.mjh.nz/.r/10-deadlywomen.m3u8">Deadly Women</option>
+		<option value="https://i.mjh.nz/.r/10-crime-time.m3u8">Crime Time</option>
+		<option value="https://i.mjh.nz/.r/10-crime-hunters.m3u8">Crime Hunters</option>
+		<option value="https://i.mjh.nz/.r/10-forty-eight-hours.m3u8">48 Hours</option>
+		<option value="https://i.mjh.nz/.r/10-haunt-tv.m3u8">Haunt TV</option>
+		<option value="https://i.mjh.nz/.r/10-ghosthunters.m3u8">Ghost Hunters</option>
+		<option value="https://i.mjh.nz/.r/10-anthonybourdain.m3u8">Anthony Bourdain: Parts Unknown</option>
+		<option value="https://i.mjh.nz/.r/10-wildest.m3u8">Wildest</option>
+		<option value="https://i.mjh.nz/.r/10-shockwave.m3u8">Shockwave</option>
+		<option value="https://i.mjh.nz/.r/10-historyandwarfare.m3u8">History & Warfare</option>
+		<option value="https://i.mjh.nz/.r/10-documentaryshell.m3u8">Sharks & Other Predators</option>
+		<option value="https://i.mjh.nz/.r/10-romancemovies.m3u8">Romance Movies</option>
+		<option value="https://i.mjh.nz/.r/10-moviesphere.m3u8">Moviesphere</option>
+		<option value="https://i.mjh.nz/.r/10-nick-jr.m3u8">Nick Jr Club</option>
+		<option value="https://i.mjh.nz/.r/10-spongebobsquarepants.m3u8">SpongeBob SquarePants</option>
+		<option value="https://i.mjh.nz/.r/10-nicktoons.m3u8">NickToons</option>
+		<option value="https://i.mjh.nz/.r/10-nicktoons-90s.m3u8">NickToons 90s</option>
+		<option value="https://i.mjh.nz/.r/10-nickteen.m3u8">NickTeen</option>
+		<option value="https://i.mjh.nz/.r/10-geckotv.m3u8">Gecko TV</option>
+		<option value="https://i.mjh.nz/.r/10-youtv.m3u8">YouTV</option>
+		<option value="https://i.mjh.nz/.r/sbs-sbst.m3u8">SBS</option>
+		<option value="https://i.mjh.nz/.r/sbs-2syd.m3u8">SBS VICELAND</option>
+		<option value="https://i.mjh.nz/.r/sbs-3syd.m3u8">SBS Food</option>
+		<option value="https://i.mjh.nz/.r/sbs-5nsw.m3u8">NITV</option>
+		<option value="https://i.mjh.nz/.r/sbs-4syd.m3u8">SBS World Movies</option>
+		<option value="https://i.mjh.nz/.r/sbs-6nat.m3u8">SBS WorldWatch</option>
+		<option value="https://i.mjh.nz/.r/sbs-france24.m3u8">France 24</option>
+		<option value="https://i.mjh.nz/.r/sbs-euronews.m3u8">euronews</option>
+		<option value="https://i.mjh.nz/.r/sbs-sb02.m3u8">Insight</option>
+		<option value="https://i.mjh.nz/.r/sbs-sb03.m3u8">Dateline</option>
+		<option value="https://i.mjh.nz/.r/sbs-sysdata_s_p_a_fifa_6.m3u8">FIFA+</option>
+		<option value="https://i.mjh.nz/.r/sbs-sb01.m3u8">The Cook Up</option>
+		<option value="https://i.mjh.nz/.r/sbs-7faa.m3u8">Planet Luke Nguyen</option>
+		<option value="https://i.mjh.nz/.r/sbs-sbs-popeuro.m3u8">SBS PopEuro</option>
+		<option value="https://i.mjh.nz/.r/sbs-sbs-chill.m3u8">SBS Chill</option>
+		<option value="https://i.mjh.nz/.r/sbs-sbs-pop-asia.m3u8">SBS PopAsia</option>
+		<option value="https://i.mjh.nz/.r/sbs-sbs-pop-desi.m3u8">SBS South Asian</option>
+		<option value="https://i.mjh.nz/.r/sbs-sbs-pop-araby.m3u8">SBS Arabic</option>
+		<option value="https://i.mjh.nz/.r/sbs-sbs-radio-1.m3u8">SBS Radio 1</option>
+		<option value="https://i.mjh.nz/.r/sbs-sbs-radio-2.m3u8">SBS Radio 2</option>
+		<option value="https://i.mjh.nz/.r/sbs-sbs-radio-3.m3u8">SBS Radio 3</option>
+		<option value="https://c.mjh.nz/abc-kids.m3u8">ABC Kids</option>
+		<option value="https://c.mjh.nz/abc-tv-plus.m3u8">ABC Family</option>
+		<option value="https://c.mjh.nz/abc-me.m3u8">ABC Entertains</option>
+		<option value="https://c.mjh.nz/abc-news.m3u8">ABC NEWS</option>
+		<option value="https://c.mjh.nz/news_in_90_seconds">ABC News in 90 Seconds</option>
+		<option value="https://c.mjh.nz/business_in_90_seconds">ABC Business in 90 Seconds</option>
+		<option value="https://c.mjh.nz/sport_in_90_seconds">ABC Sport in 90 Seconds</option>
+		<option value="https://c.mjh.nz/weather_in_90_seconds">ABC Weather in 90 Seconds</option>
+		<option value="https://i.mjh.nz/.r/sky-racing-1.m3u8">Sky Racing #1</option>
+		<option value="https://i.mjh.nz/.r/sky-racing-2.m3u8">Sky Racing #2</option>
+		<option value="https://i.mjh.nz/.r/sky-racing-thoroughbred.m3u8">Sky Racing - Thoroughbred Central</option>
+		<option value="https://i.mjh.nz/.r/bloomberg-tv.m3u8">Bloomberg TV</option>
+		<option value="https://i.mjh.nz/.r/sky-news-now.m3u8">Sky News Now</option>
+		<option value="https://c.mjh.nz/good-dot.m3u8">GOOD.</option>
+		<option value="https://i.mjh.nz/.r/bbc-news.m3u8">BBC News</option>
+		<option value="https://i.mjh.nz/.r/redbull-tv.m3u8">Redbull TV</option>
+		<option value="https://i.mjh.nz/.r/channel-news-asia.m3u8">Channel News Asia (CNA)</option>
+		<option value="https://i.mjh.nz/.r/dw-news.m3u8">DW English</option>
+      </optgroup>
+      <optgroup label="Radio Streams">
+        <option value="https://22393.live.streamtheworld.com/LOVE972FMAAC.aac?dist=radiosingapore">Love 972 FM</option>
+        <option value="https://22903.live.streamtheworld.com/YES933_PREM.aac?dist=radiosingapore">YES 933 FM</option>
+        <option value="https://22393.live.streamtheworld.com/GOLD905AAC.aac?dist=radiosingapore">Gold 905 FM</option>
+        <option value="https://28373.live.streamtheworld.com/OLI968FM_PREM.aac?dist=radiosingapore">Oli 968 FM</option>
+        <option value="https://28323.live.streamtheworld.com/CLASS95AAC_SC">Class 95 FM</option>
+        <option value="https://22893.live.streamtheworld.com/987FMAAC.aac?dist=radiosingapore">987 FM</option>
+        <option value="https://stream.zeno.fm/s84858548">LoFi Hip Hop</option>
+        <option value="https://stream.zeno.fm/0r0xa792kwzuv">Jazz Radio</option>
+        <option value="https://28393.live.streamtheworld.com/RIA897FMAAC.aac?dist=radiosingapore">Ria 89,7</option>
+        <option value="https://28093.live.streamtheworld.com/KISS_92_SC">Kiss 92</option>
+		<option value="https://28153.live.streamtheworld.com/UFM_1003_SC">UFM 1003</option>
+      </optgroup>
+    </select>
+  </div>
+
+  <div class="hls-tester-section">
+    <input type="text" id="hlsInput" placeholder="Paste link HLS (.m3u8) di sini...">
+    <button id="hlsTestBtn"><i class="fas fa-play-circle"></i> Test HLS Stream</button>
+  </div>
+
+  <div class="playlist-section">
+    <div class="playlist-header">
+      <h3><i class="fas fa-list-ul"></i> Playlist</h3>
+      <button id="clearPlaylist" style="background:none; border:none; color:var(--dim); cursor:pointer; font-size:0.7rem;"><i class="fas fa-trash"></i> Clear</button>
+    </div>
+    <div class="playlist-container" id="playlistContainer"></div>
+  </div>
+
+  <div class="eq-section">
+    <div class="eq-header">
+      <span><i class="fas fa-sliders-h"></i> 10-Band EQ</span>
+      <div class="eq-header-controls">
+        <select id="eqPreset">
+          <option value="Flat">Flat</option><option value="Full Bass">Full Bass</option><option value="Clear Vocal">Vocal</option>
+          <option value="Treble Boost">Treble</option><option value="Rock">Rock</option><option value="Electronic">Electronic</option>
+        </select>
+        <button id="savePresetBtn" title="Simpan Custom EQ"><i class="fas fa-save"></i></button>
+        <button id="loadPresetBtn" title="Muat Custom EQ"><i class="fas fa-folder-open"></i></button>
+      </div>
+    </div>
+    <div class="eq-sliders" id="eqSliders"></div>
+  </div>
+
+  <div class="rec-section">
+    <button id="recBtn"><i class="fas fa-microphone"></i> Audio Rec</button>
+    <button id="saveRecBtn" disabled><i class="fas fa-save"></i> Save MP3</button>
+  </div>
+  <div class="screen-rec-section">
+    <button id="screenRecBtn"><i class="fas fa-desktop"></i> Screen Recorder</button>
+  </div>
+
+  <label class="add-btn" for="fileInput"><i class="fas fa-folder-open"></i> Tambah File ke Playlist</label>
+  <input type="file" id="fileInput" class="file-input" multiple accept="audio/*,video/*">
+</div>
+
+<script>
+  (() => {
+    // ========== AUDIO WORKLET ==========
+    const recorderWorkletCode = `
+      class RecorderProcessor extends AudioWorkletProcessor {
+        constructor() { super(); this.recording = false; this.port.onmessage = (e) => { if(e.data.command==='START') this.recording=true; if(e.data.command==='STOP') this.recording=false; }; }
+        process(inputs) { if(this.recording && inputs[0] && inputs[0][0]) this.port.postMessage(inputs[0][0]); return true; }
+      }
+      registerProcessor('recorder-processor', RecorderProcessor);
+    `;
+
+    // ========== PASSWORD ==========
+    const PASSWORD_HASH = '904a181ff00a1323a28d23fdb7a6b3bf9d42b87a08e3c8710dc85915634239e1';
+    const overlay = document.getElementById('passwordOverlay');
+    const passInput = document.getElementById('passInput');
+    const unlockBtn = document.getElementById('unlockBtn');
+    const passError = document.getElementById('passError');
+    const playerBox = document.getElementById('playerBox');
+
+    async function sha256(input) {
+      const data = new TextEncoder().encode(input);
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    async function unlockPlayer() {
+      if (await sha256(passInput.value) === PASSWORD_HASH) {
+        overlay.classList.add('hidden'); playerBox.style.display = '';
+        sessionStorage.setItem('miniplayer_auth','1');
+        initAudioEngine(); if(audioCtx?.state==='suspended') audioCtx.resume();
+        setTimeout(()=>window.dispatchEvent(new Event('resize')), 100);
+      } else passError.style.display='block';
+    }
+    unlockBtn.onclick=unlockPlayer; passInput.addEventListener('keypress',e=>{ if(e.key==='Enter') unlockPlayer(); });
+    if(sessionStorage.getItem('miniplayer_auth')==='1') { overlay.classList.add('hidden'); playerBox.style.display=''; setTimeout(()=>window.dispatchEvent(new Event('resize')),100); }
+
+    // ========== INDEXEDDB ==========
+    const DB='MiniPlayerDB', ST='playlist'; let db;
+    function openDB(){ return new Promise((res,rej)=>{ const r=indexedDB.open(DB,1); r.onupgradeneeded=e=>{ if(!e.target.result.objectStoreNames.contains(ST)) e.target.result.createObjectStore(ST,{keyPath:'id',autoIncrement:true}); }; r.onsuccess=e=>{ db=e.target.result; res(db); }; r.onerror=rej; }); }
+    async function saveF(f){ if(!db) await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(ST,'readwrite'), s=tx.objectStore(ST), r=s.add({name:f.name,type:f.type,file:f}); r.onsuccess=()=>res(r.result); r.onerror=rej; }); }
+    async function allF(){ if(!db) await openDB(); return new Promise((res,rej)=>{ db.transaction(ST,'readonly').objectStore(ST).getAll().onsuccess=e=>res(e.target.result); }); }
+    async function delF(id){ if(!db) await openDB(); return new Promise((res,rej)=>{ db.transaction(ST,'readwrite').objectStore(ST).delete(id).onsuccess=res; }); }
+    async function clearF(){ if(!db) await openDB(); return new Promise((res,rej)=>{ db.transaction(ST,'readwrite').objectStore(ST).clear().onsuccess=res; }); }
+
+    // ========== AUDIO ENGINE ==========
+    const eqF=[31,62,125,250,500,1000,2000,4000,8000,16000];
+    const pre={ Flat:[0,0,0,0,0,0,0,0,0,0], 'Full Bass':[8,7,6,5,4,2,0,-2,-4,-5], 'Clear Vocal':[-2,-1,0,2,4,5,3,1,0,-1], 'Treble Boost':[-3,-2,-1,0,2,4,6,7,8,9], Rock:[5,4,3,2,1,2,4,5,6,5], Electronic:[7,5,3,1,0,1,3,5,6,7] };
+    let audioCtx, sourceNode, analyserNode, gainNode, panNode, compressorNode, filters=[], animId, eqGains=Array(eqF.length).fill(0), viz='classic', hls=null, streamAbort=null;
+
+    const media=document.getElementById('videoPlayer'), playBtn=document.getElementById('playBtn'), prevBtn=document.getElementById('prevBtn'), nextBtn=document.getElementById('nextBtn'), stopBtn=document.getElementById('stopBtn');
+    const volS=document.getElementById('volSlider'), panS=document.getElementById('panSlider'), speedS=document.getElementById('speedSelector'), timeD=document.getElementById('timeDisplay');
+    const trackSt=document.getElementById('trackStatus'), trackTi=document.getElementById('trackTitle'), trackAr=document.getElementById('trackArtist'), trackEx=document.getElementById('trackExtra');
+    const radioS=document.getElementById('radioSelector'), plCont=document.getElementById('playlistContainer'), fileInp=document.getElementById('fileInput'), seekS=document.getElementById('seekSlider');
+    const volV=document.getElementById('volValue'), panV=document.getElementById('panValue'), vizSel=document.getElementById('vizTheme'), vizC=document.getElementById('visualizer');
+
+    const wavesurfer = WaveSurfer.create({ container:'#waveform', media, waveColor:'rgba(0,229,255,0.3)', progressColor:'rgba(0,229,255,0.5)', cursorColor:'#ff3b30', height:120, barWidth:2, barRadius:2, barGap:1, plugins:[WaveSurfer.Hover.create({lineColor:'#fff',lineWidth:1,labelBackground:'#555'})] });
+
+    function initAudioEngine() {
+      if(audioCtx) { if(audioCtx.state==='suspended') audioCtx.resume(); return; }
+      try {
+        audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+        sourceNode=audioCtx.createMediaElementSource(media); analyserNode=audioCtx.createAnalyser(); analyserNode.fftSize=512;
+        compressorNode=audioCtx.createDynamicsCompressor(); panNode=audioCtx.createStereoPanner(); gainNode=audioCtx.createGain();
+        gainNode.gain.value=volS.value/100; panNode.pan.value=parseFloat(panS.value);
+        sourceNode.connect(analyserNode); let prev=analyserNode; filters=[];
+        eqF.forEach((f,i)=>{ const fl=audioCtx.createBiquadFilter(); fl.type='peaking'; fl.frequency.value=f; fl.Q.value=1; fl.gain.value=eqGains[i]; filters.push(fl); prev.connect(fl); prev=fl; });
+        prev.connect(compressorNode); compressorNode.connect(panNode); panNode.connect(gainNode); gainNode.connect(audioCtx.destination);
+        startVisualizer();
+      } catch(e){ console.error(e); }
+    }
+
+    function getGradient(t,ctx,h){
+      const g=ctx.createLinearGradient(0,h,0,0);
+      switch(t){
+        case'rainbow':g.addColorStop(0,'#f00');g.addColorStop(.3,'#f80');g.addColorStop(.6,'#ff0');g.addColorStop(1,'#0f0');break;
+        case'fire':g.addColorStop(0,'#f00');g.addColorStop(.5,'#f60');g.addColorStop(1,'#ff0');break;
+        case'ocean':g.addColorStop(0,'#0af');g.addColorStop(.6,'#0ff');g.addColorStop(1,'#eff');break;
+        case'spectrum':g.addColorStop(0,'#0ef');g.addColorStop(.5,'#0f8');g.addColorStop(1,'#7f0');break;
+        default:g.addColorStop(0,'#005f73');g.addColorStop(.6,'#0ef');g.addColorStop(1,'#fff');
+      }return g;
+    }
+
+    function startVisualizer() {
+      if (!vizC || !analyserNode) return;
+      const ctx = vizC.getContext('2d');
+      const bufferLength = analyserNode.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      function draw() {
+        animId = requestAnimationFrame(draw);
+        analyserNode.getByteFrequencyData(dataArray);
+        const w = vizC.width;
+        const h = vizC.height;
+        ctx.clearRect(0, 0, w, h);
+        if (!w || !h) return;
+
+        if (viz === 'spectrum') {
+          ctx.beginPath();
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = getGradient(viz, ctx, h);
+          const sliceWidth = w / bufferLength;
+          let x = 0;
+          for (let i = 0; i < bufferLength; i++) {
+            const y = h - (dataArray[i] / 255 * h);
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            x += sliceWidth;
+          }
+          ctx.stroke();
+        } else {
+          const barWidth = (w / bufferLength) * 2.5;
+          let x = 0;
+          ctx.fillStyle = getGradient(viz, ctx, h);
+          for (let i = 0; i < bufferLength; i++) {
+            const barHeight = (dataArray[i] / 255) * h;
+            ctx.fillRect(x, h - barHeight, barWidth - 1, barHeight);
+            x += barWidth;
+          }
+        }
+      }
+
+      function resize() {
+        const container = document.getElementById('waveform-container');
+        if (container && container.clientWidth > 0 && container.clientHeight > 0) {
+          vizC.width = container.clientWidth;
+          vizC.height = container.clientHeight;
+        }
+      }
+
+      window.addEventListener('resize', resize);
+      resize();
+      if (animId) cancelAnimationFrame(animId);
+      draw();
+    }
+    vizSel.onchange = e => { viz = e.target.value; };
+
+    // ========== STATE ==========
+    let playlist=[], curIdx=-1, curUrl=null, playing=false, radioMode=false, seeking=false;
+    function updPlUI(){ plCont.innerHTML=''; playlist.forEach((it,i)=>{ const d=document.createElement('div'); d.className=`playlist-item ${i===curIdx?'active':''}`; const ic=it.type.startsWith('video')?'fa-video':'fa-music'; d.innerHTML=`<i class="fas ${ic}"></i><div class="item-name">${esc(it.name)}</div><div class="item-type">${it.type.split('/')[1]||'file'}</div><div class="remove-btn"><i class="fas fa-times"></i></div>`; d.querySelector('.remove-btn').onclick=async e=>{ e.stopPropagation(); await delF(it.id); playlist.splice(i,1); if(i===curIdx){ stopPlay(); curIdx=-1; } else if(i<curIdx) curIdx--; updPlUI(); }; d.onclick=()=>{ if(i===curIdx) togglePP(); else { curIdx=i; radioMode=false; speedS.disabled=false; loadPlay(); } }; plCont.appendChild(d); }); }
+    function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+    function updSeek(){ if(seeking) return; const d=media.duration; if(!d||!isFinite(d)){ seekS.value=0; return; } seekS.value=(media.currentTime/d)*100; }
+    seekS.oninput=()=>{ const d=media.duration; if(!d||!isFinite(d)) return; seeking=true; media.currentTime=(seekS.value/100)*d; }; seekS.onchange=()=>{ seeking=false; };
+    media.addEventListener('timeupdate',()=>{ if(!media.src||media.readyState<1) return; const c=media.currentTime, d=media.duration; if(isNaN(c)||isNaN(d)) return; timeD.textContent=`${fmt(c)} / ${fmt(d)}`; updSeek(); });
+    function updateMS(t,a){ if('mediaSession' in navigator) navigator.mediaSession.metadata=new MediaMetadata({title:t,artist:a,artwork:[{src:'https://via.placeholder.com/512x512.png?text=MP',sizes:'512x512',type:'image/png'}]}); }
+    function togglePP(){ initAudioEngine(); if(audioCtx?.state==='suspended') audioCtx.resume(); if(!media.src&&playlist.length){ curIdx=0; radioMode=false; speedS.disabled=false; loadPlay(); return; } if(!media.src) return; if(media.paused) media.play().catch(()=>{}); else media.pause(); }
+    async function loadPlay(){ if(curIdx<0||curIdx>=playlist.length) return; initAudioEngine(); media.pause(); if(hls){ hls.destroy(); hls=null; } if(streamAbort){ streamAbort.abort(); streamAbort=null; } if(curUrl){ URL.revokeObjectURL(curUrl); curUrl=null; } const it=playlist[curIdx]; curUrl=URL.createObjectURL(it.file); media.src=curUrl; media.classList.toggle('active',it.type.startsWith('video/')); trackSt.textContent='Loading...'; trackTi.textContent=it.name; trackAr.textContent=it.type.startsWith('video/')?'Video File':'Audio File'; trackEx.textContent=`Format: ${it.type}`; updateMS(it.name, trackAr.textContent); readMeta(it.file); wavesurfer.load(curUrl); media.playbackRate=parseFloat(speedS.value); try{ await media.play(); playing=true; } catch(e){ console.warn('Autoplay blocked'); trackSt.textContent='Autoplay Blocked - Click Play'; playing=false; } updPlUI(); }
+    function stopPlay(){ media.pause(); media.currentTime=0; playing=false; playBtn.innerHTML='<i class="fas fa-play"></i>'; trackSt.textContent='Stopped'; radioMode=false; speedS.disabled=false; if(hls){ hls.destroy(); hls=null; } if(streamAbort){ streamAbort.abort(); streamAbort=null; } }
+
+    // ========== PERBAIKAN UTAMA: playStream stabil ==========
+    async function playStream(url, name) {
+      initAudioEngine();
+      if (audioCtx?.state === 'suspended') await audioCtx.resume();
+
+      // Batalkan stream lama
+      if (streamAbort) { streamAbort.abort(); streamAbort = null; }
+      if (hls) { hls.destroy(); hls = null; }
+      if (curUrl) { URL.revokeObjectURL(curUrl); curUrl = null; }
+
+      // Reset media
+      media.pause();
+      media.removeAttribute('src');
+      media.load();
+      media.crossOrigin = "anonymous";
+      media.classList.remove('active');
+
+      trackSt.textContent = 'Buffering...';
+      trackTi.textContent = name;
+      trackAr.textContent = 'Live Content';
+      trackEx.textContent = '';
+      updateMS(name, 'Live');
+      radioMode = true;
+      playBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i>';
+      speedS.value = '1';
+      speedS.disabled = true;
+
+      try {
+        if (url.endsWith('.m3u8') || url.includes('m3u8')) {
+          if (Hls.isSupported()) {
+            hls = new Hls({ lowLatencyMode: false, maxBufferLength: 30, maxMaxBufferLength: 60, enableWorker: true });
+            hls.loadSource(url);
+            hls.attachMedia(media);
+            
+            await new Promise((resolve, reject) => {
+              const onManifest = () => {
+                hls.off(Hls.Events.MANIFEST_PARSED, onManifest);
+                hls.off(Hls.Events.ERROR, onError);
+                media.play().then(resolve).catch(reject);
+              };
+              const onError = (event, data) => {
+                if (data.fatal) {
+                  hls.off(Hls.Events.MANIFEST_PARSED, onManifest);
+                  hls.off(Hls.Events.ERROR, onError);
+                  hls.destroy();
+                  hls = null;
+                  reject(new Error('HLS fatal'));
+                }
+              };
+              hls.on(Hls.Events.MANIFEST_PARSED, onManifest);
+              hls.on(Hls.Events.ERROR, onError);
+              
+              streamAbort = new AbortController();
+              streamAbort.signal.addEventListener('abort', () => {
+                hls.off(Hls.Events.MANIFEST_PARSED, onManifest);
+                hls.off(Hls.Events.ERROR, onError);
+                if (hls) { hls.destroy(); hls = null; }
+                reject(new Error('Aborted'));
+              }, { once: true });
+            });
+            media.classList.add('active');
+          } else if (media.canPlayType('application/vnd.apple.mpegurl')) {
+            media.src = url;
+            await media.play();
+            media.classList.add('active');
+          } else {
+            throw new Error('HLS tidak didukung');
+          }
+        } else {
+          // Radio
+          media.crossOrigin = 'anonymous';
+          media.src = url;
+          await media.play();
+        }
+
+        trackSt.textContent = 'Streaming';
+        playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        playing = true;
+      } catch (err) {
+        if (err.message === 'Aborted') return;
+        console.error('Stream error:', err);
+        trackSt.textContent = 'Stream Error - Check Network';
+        trackAr.textContent = 'Gagal memutar channel';
+        playBtn.innerHTML = '<i class="fas fa-play"></i>';
+        radioMode = false;
+        speedS.disabled = false;
+      }
+    }
+
+    radioS.onchange = e => {
+      if (e.target.value) playStream(e.target.value, e.target.options[e.target.selectedIndex].text);
+    };
+    document.getElementById('hlsTestBtn').onclick = () => {
+      const url = document.getElementById('hlsInput').value;
+      if (url) playStream(url, 'Custom HLS');
+    };
+
+    function readMeta(f){ if(!f||!window.jsmediatags) return; window.jsmediatags.read(f,{ onSuccess:tag=>{ if(tag.tags.title) trackTi.textContent=tag.tags.title; if(tag.tags.artist) trackAr.textContent=`${tag.tags.artist}${tag.tags.album?' • '+tag.tags.album:''}`; updateMS(trackTi.textContent, trackAr.textContent); }, onError:()=>{} }); }
+    media.addEventListener('ended',()=>{ if(radioMode) return; if(curIdx<playlist.length-1){ curIdx++; loadPlay(); } else { stopPlay(); trackSt.textContent='Finished'; } });
+    media.addEventListener('play',()=>{ playing=true; playBtn.innerHTML='<i class="fas fa-pause"></i>'; if(trackSt.textContent!=='Streaming') trackSt.textContent='Playing'; if(audioCtx?.state==='suspended') audioCtx.resume(); });
+    media.addEventListener('pause',()=>{ playing=false; playBtn.innerHTML='<i class="fas fa-play"></i>'; if(trackSt.textContent!=='Streaming') trackSt.textContent='Paused'; });
+    function fmt(s){ if(isNaN(s)||!isFinite(s)) return'00:00'; const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.floor(s%60); return h>0?`${h}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`:`${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`; }
+    playBtn.onclick=togglePP; stopBtn.onclick=stopPlay;
+    prevBtn.onclick=()=>{ if(curIdx>0){ curIdx--; radioMode=false; speedS.disabled=false; loadPlay(); } };
+    nextBtn.onclick=()=>{ if(curIdx<playlist.length-1){ curIdx++; radioMode=false; speedS.disabled=false; loadPlay(); } };
+    if('mediaSession' in navigator){ navigator.mediaSession.setActionHandler('play',togglePP); navigator.mediaSession.setActionHandler('pause',togglePP); navigator.mediaSession.setActionHandler('previoustrack',()=>prevBtn.click()); navigator.mediaSession.setActionHandler('nexttrack',()=>nextBtn.click()); }
+
+    // ========== EQ ==========
+    const eqC=document.getElementById('eqSliders');
+    eqF.forEach((f,i)=>{ const w=document.createElement('div'); w.className='eq-slider'; w.innerHTML=`<div class="slider-wrap"><input type="range" min="-12" max="12" value="0" step="0.5"></div><label>${f>=1000?f/1000+'k':f}</label>`; const inp=w.querySelector('input'); inp.oninput=()=>{ const v=parseFloat(inp.value); if(filters[i]) filters[i].gain.value=v; eqGains[i]=v; document.getElementById('eqPreset').value='Custom'; }; eqC.appendChild(w); });
+    document.getElementById('eqPreset').onchange=e=>{ const g=pre[e.target.value]; if(!g) return; const inps=eqC.querySelectorAll('input'); g.forEach((v,i)=>{ inps[i].value=v; eqGains[i]=v; if(filters[i]) filters[i].gain.value=v; }); };
+    document.getElementById('savePresetBtn').onclick=()=>{ const n=prompt('Nama preset:'); if(n){ localStorage.setItem(`eq_${n}`,JSON.stringify(eqGains)); alert(`Preset "${n}" disimpan!`); } };
+    document.getElementById('loadPresetBtn').onclick=()=>{ const ks=Object.keys(localStorage).filter(k=>k.startsWith('eq_')); if(!ks.length){ alert('Belum ada preset.'); return; } const ch=prompt('Pilih preset:\n'+ks.map(k=>k.replace('eq_','')).join('\n')); if(ch&&localStorage.getItem(`eq_${ch}`)){ const g=JSON.parse(localStorage.getItem(`eq_${ch}`)); const inps=eqC.querySelectorAll('input'); g.forEach((v,i)=>{ inps[i].value=v; eqGains[i]=v; if(filters[i]) filters[i].gain.value=v; }); document.getElementById('eqPreset').value='Custom'; } };
+
+    // ========== VOL / PAN ==========
+    volS.oninput=()=>{ volV.textContent=volS.value+'%'; if(gainNode) gainNode.gain.value=volS.value/100; };
+    panS.oninput=()=>{ const v=parseFloat(panS.value); if(panNode) panNode.pan.value=v; panV.textContent=v<0?`L ${Math.abs(v).toFixed(1)}`:v>0?`R ${v.toFixed(1)}`:'0.0 C'; };
+    speedS.onchange=()=>{ if(!radioMode) media.playbackRate=parseFloat(speedS.value); };
+
+    // ========== AUDIO RECORDER (Mic+App) ==========
+    const recBtn=document.getElementById('recBtn'), saveRecBtn=document.getElementById('saveRecBtn');
+    let rec=false, recChunks=[], recTimer=null, recSec=0, mp3Blob=null, micStream=null, recNode=null, mixDest=null, playerMixed=false;
+    let workletLoaded=false;
+    async function loadWorklet(){ if(workletLoaded) return true; if(!audioCtx?.audioWorklet) return false; try{ const blob=new Blob([recorderWorkletCode],{type:'application/javascript'}); const url=URL.createObjectURL(blob); await audioCtx.audioWorklet.addModule(url); URL.revokeObjectURL(url); return workletLoaded=true; }catch(e){ console.warn('Worklet gagal:',e); return false; } }
+    async function startAudioRec(){ if(rec) return; initAudioEngine(); if(audioCtx.state==='suspended') await audioCtx.resume(); try{ micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); mixDest=audioCtx.createMediaStreamDestination(); if(!playerMixed){ gainNode.connect(mixDest); playerMixed=true; } const micSrc=audioCtx.createMediaStreamSource(micStream); micSrc.connect(mixDest); const mixed=audioCtx.createMediaStreamSource(mixDest.stream); recChunks=[]; recSec=0; if(await loadWorklet()){ recNode=new AudioWorkletNode(audioCtx,'recorder-processor'); mixed.connect(recNode); recNode.connect(audioCtx.destination); recNode.port.onmessage=e=>{ if(rec) recChunks.push(new Float32Array(e.data)); }; recNode.port.postMessage({command:'START'}); } else { recNode=audioCtx.createScriptProcessor(4096,1,1); mixed.connect(recNode); recNode.connect(audioCtx.destination); recNode.onaudioprocess=e=>{ if(!rec) return; recChunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); }; } rec=true; recBtn.classList.add('recording'); saveRecBtn.disabled=true; recTimer=setInterval(()=>{ recSec++; const m=Math.floor(recSec/60),s=recSec%60; recBtn.innerHTML=`<i class="fas fa-stop"></i> Stop ${m}:${s.toString().padStart(2,'0')}`; },1000); }catch(err){ alert('Gagal rekam: '+err.message); } }
+    async function stopAudioRec(){ if(!rec) return; clearInterval(recTimer); rec=false; if(recNode){ if(recNode.port) recNode.port.postMessage({command:'STOP'}); try{ recNode.disconnect(); }catch{} recNode=null; } recBtn.classList.remove('recording'); recBtn.innerHTML='<i class="fas fa-microphone"></i> Audio Rec'; if(micStream){ micStream.getTracks().forEach(t=>t.stop()); micStream=null; } if(playerMixed&&gainNode&&mixDest){ try{ gainNode.disconnect(mixDest); }catch{} playerMixed=false; } mixDest=null; if(!recChunks.length) return; const total=recChunks.reduce((a,c)=>a+c.length,0); const result=new Float32Array(total); let off=0; for(let c of recChunks){ result.set(c,off); off+=c.length; } recChunks=[]; const enc=new lamejs.Mp3Encoder(1,44100,128); const samples=new Int16Array(result.length); for(let i=0;i<result.length;i++){ let s=Math.max(-1,Math.min(1,result[i])); samples[i]=s<0?s*0x8000:s*0x7FFF; } const mp3D=[]; for(let i=0;i<samples.length;i+=1152){ const ch=enc.encodeBuffer(samples.subarray(i,i+1152)); if(ch.length) mp3D.push(ch); } const fl=enc.flush(); if(fl.length) mp3D.push(fl); mp3Blob=new Blob(mp3D,{type:'audio/mp3'}); saveRecBtn.disabled=false; }
+    recBtn.onclick=()=>{ rec?stopAudioRec():startAudioRec(); };
+    const downloadBlob=(blob,fn)=>{ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); };
+    saveRecBtn.onclick=()=>{ if(!mp3Blob) return; downloadBlob(mp3Blob,`Audio_Rec_${Date.now()}.mp3`); saveRecBtn.disabled=true; mp3Blob=null; };
+
+    // ========== SCREEN RECORDER (PC only) ==========
+    const scrBtn=document.getElementById('screenRecBtn'); let scrRec=null, scrChunks=[], scrDisp=null, scrMic=null, scrCtx=null, scrDest=null;
+    const hasScr=()=>!!(navigator.mediaDevices?.getDisplayMedia && typeof MediaRecorder!=='undefined');
+    const pickMime=()=>{ if(typeof MediaRecorder==='undefined') return''; const c=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm;codecs=vp8','video/webm']; return c.find(t=>MediaRecorder.isTypeSupported(t))||''; };
+    const resetScrUI=()=>{ scrBtn.classList.remove('recording'); scrBtn.innerHTML='<i class="fas fa-desktop"></i> Screen Recorder'; scrRec=null; };
+    const stopScrStreams=async()=>{ if(scrDisp){ scrDisp.getTracks().forEach(t=>t.stop()); scrDisp=null; } if(scrMic){ scrMic.getTracks().forEach(t=>t.stop()); scrMic=null; } if(scrCtx){ try{ await scrCtx.close(); }catch{} scrCtx=null; scrDest=null; } };
+    const cleanupScr=async()=>{ await stopScrStreams(); scrChunks=[]; resetScrUI(); };
+    async function startScrRec(){
+      if(!hasScr()){ alert('Screen recording hanya untuk pc, untuk hp gunakan screen recording bawaan.'); return; }
+      try{
+        scrDisp=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:{ideal:30}},audio:true});
+        const vTrack=scrDisp.getVideoTracks()[0]; if(!vTrack) throw new Error('Tidak ada track video.');
+        scrCtx=new (window.AudioContext||window.webkitAudioContext)(); if(scrCtx.state==='suspended') await scrCtx.resume();
+        scrDest=scrCtx.createMediaStreamDestination();
+        const mixAudio=s=>{ if(!s) return; const at=s.getAudioTracks(); if(!at.length) return; scrCtx.createMediaStreamSource(new MediaStream(at)).connect(scrDest); };
+        mixAudio(scrDisp);
+        try{ scrMic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}); mixAudio(scrMic); }catch{}
+        const combined=new MediaStream([vTrack,...scrDest.stream.getAudioTracks()]); const mime=pickMime();
+        scrRec=new MediaRecorder(combined,mime?{mimeType:mime}:undefined); scrChunks=[];
+        scrRec.ondataavailable=e=>{ if(e.data?.size) scrChunks.push(e.data); };
+        scrRec.onerror=e=>console.error(e);
+        vTrack.addEventListener('ended',()=>{ if(scrRec?.state==='recording') scrRec.stop(); },{once:true});
+        scrRec.onstop=async()=>{ try{ const blob=new Blob(scrChunks,{type:scrRec.mimeType||'video/webm'}); if(blob.size) downloadBlob(blob,`Screen_Rec_${Date.now()}.webm`); } finally { await cleanupScr(); } };
+        scrRec.start(1000); scrBtn.classList.add('recording'); scrBtn.innerHTML='<i class="fas fa-stop"></i> Stop Screen Rec';
+      } catch(err){ await cleanupScr(); alert('Screen Rec Error: '+(err?.message||err)); }
+    }
+    scrBtn.onclick=()=>{ if(scrRec?.state==='recording') scrRec.stop(); else startScrRec(); };
+    window.addEventListener('beforeunload',()=>{ if(scrRec?.state==='recording') try{ scrRec.stop(); }catch{} if(rec) try{ stopAudioRec(); }catch{} });
+
+    // ========== FILE INPUT ==========
+    fileInp.onchange=async e=>{ const fs=Array.from(e.target.files); if(!fs.length) return; for(const f of fs){ const id=await saveF(f); playlist.push({id,name:f.name,type:f.type,file:f}); } if(curIdx===-1){ curIdx=playlist.length-fs.length; loadPlay(); } else updPlUI(); fileInp.value=''; };
+    document.getElementById('clearPlaylist').onclick=async()=>{ if(confirm('Hapus playlist?')){ await clearF(); playlist=[]; curIdx=-1; stopPlay(); updPlUI(); } };
+
+    // ========== INIT ==========
+    setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleTimeString('id-ID',{hour12:false}),1000);
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=3.5952&longitude=98.6722&current_weather=true&timezone=Asia/Jakarta').then(r=>r.json()).then(d=>{ document.querySelector('#weather span').textContent=d.current_weather.temperature+'°C'; }).catch(()=>{});
+    (async()=>{ await openDB(); const items=await allF(); playlist=items.map(i=>({id:i.id,name:i.name,type:i.type,file:i.file})); updPlUI(); })();
+  })();
+</script>
+</body>
+</html>
