@@ -619,23 +619,58 @@
       }return g;
     }
 
-    function startVisualizer(){
-      if(!vizC||!analyserNode) return; const ctx=vizC.getContext('2d'), bl=analyserNode.frequencyBinCount, dArr=new Uint8Array(bl);
-      function draw(){
-        animId=requestAnimationFrame(draw); analyserNode.getByteFrequencyData(dArr);
-        const w=vizC.width, h=vizC.height; ctx.clearRect(0,0,w,h); if(!w||!h) return;
-        if(viz==='spectrum'){
-          ctx.beginPath(); ctx.lineWidth=3; ctx.strokeStyle=getGradient(viz,ctx,h); const sw=w/bl; let x=0;
-          for(let i=0;i<bl;i++){ const y=h-(dArr[i]/255*h); i?ctx.lineTo(x,y):ctx.moveTo(x,y); x+=sw; } ctx.stroke();
+    function startVisualizer() {
+      if (!vizC || !analyserNode) return;
+      const ctx = vizC.getContext('2d');
+      const bufferLength = analyserNode.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      function draw() {
+        animId = requestAnimationFrame(draw);
+        analyserNode.getByteFrequencyData(dataArray);
+        const w = vizC.width;
+        const h = vizC.height;
+        ctx.clearRect(0, 0, w, h);
+        if (!w || !h) return;
+
+        if (viz === 'spectrum') {
+          ctx.beginPath();
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = getGradient(viz, ctx, h);
+          const sliceWidth = w / bufferLength;
+          let x = 0;
+          for (let i = 0; i < bufferLength; i++) {
+            const y = h - (dataArray[i] / 255 * h);
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            x += sliceWidth;
+          }
+          ctx.stroke();
         } else {
-          const bw=w/bl*2.5; let x=0; ctx.fillStyle=getGradient(viz,ctx,h);
-          for(let i=0;i<bl;i++){ const bh=dArr[i]/255*h; ctx.fillRect(x,h-bh,bw-1,bh); x+=bw; }
+          const barWidth = (w / bufferLength) * 2.5;
+          let x = 0;
+          ctx.fillStyle = getGradient(viz, ctx, h);
+          for (let i = 0; i < bufferLength; i++) {
+            const barHeight = (dataArray[i] / 255) * h;
+            ctx.fillRect(x, h - barHeight, barWidth - 1, barHeight);
+            x += barWidth;
+          }
         }
       }
-      function resize(){ const c=document.getElementById('waveform-container'); if(c){ vizC.width=c.clientWidth; vizC.height=c.clientHeight; } }
-      window.addEventListener('resize',resize); resize(); cancelAnimationFrame(animId); draw();
+
+      function resize() {
+        const container = document.getElementById('waveform-container');
+        if (container && container.clientWidth > 0 && container.clientHeight > 0) {
+          vizC.width = container.clientWidth;
+          vizC.height = container.clientHeight;
+        }
+      }
+
+      window.addEventListener('resize', resize);
+      resize();
+      if (animId) cancelAnimationFrame(animId);
+      draw();
     }
-    vizSel.onchange=e=>{ viz=e.target.value; };
+    vizSel.onchange = e => { viz = e.target.value; };
 
     // ========== STATE ==========
     let playlist=[], curIdx=-1, curUrl=null, playing=false, radioMode=false, seeking=false;
@@ -646,7 +681,7 @@
     media.addEventListener('timeupdate',()=>{ if(!media.src||media.readyState<1) return; const c=media.currentTime, d=media.duration; if(isNaN(c)||isNaN(d)) return; timeD.textContent=`${fmt(c)} / ${fmt(d)}`; updSeek(); });
     function updateMS(t,a){ if('mediaSession' in navigator) navigator.mediaSession.metadata=new MediaMetadata({title:t,artist:a,artwork:[{src:'https://via.placeholder.com/512x512.png?text=MP',sizes:'512x512',type:'image/png'}]}); }
     function togglePP(){ initAudioEngine(); if(audioCtx?.state==='suspended') audioCtx.resume(); if(!media.src&&playlist.length){ curIdx=0; radioMode=false; speedS.disabled=false; loadPlay(); return; } if(!media.src) return; if(media.paused) media.play().catch(()=>{}); else media.pause(); }
-    async function loadPlay(){ if(curIdx<0||curIdx>=playlist.length) return; initAudioEngine(); media.pause(); if(hls){ hls.destroy(); hls=null; } if(streamAbort){ streamAbort.abort(); streamAbort=null; } if(curUrl){ URL.revokeObjectURL(curUrl); curUrl=null; } const it=playlist[curIdx]; curUrl=URL.createObjectURL(it.file); media.src=curUrl; media.classList.toggle('active',it.type.startsWith('video/')); trackSt.textContent='Loading...'; trackTi.textContent=it.name; trackAr.textContent=it.type.startsWith('video/')?'Video File':'Audio File'; trackEx.textContent=`Format: ${it.type}`; updateMS(it.name, trackAr.textContent); readMeta(it.file); wavesurfer.load(curUrl); media.playbackRate=parseFloat(speedS.value); try{ await media.play(); } catch{ trackSt.textContent='Autoplay Blocked - Click Play'; } updPlUI(); }
+    async function loadPlay(){ if(curIdx<0||curIdx>=playlist.length) return; initAudioEngine(); media.pause(); if(hls){ hls.destroy(); hls=null; } if(streamAbort){ streamAbort.abort(); streamAbort=null; } if(curUrl){ URL.revokeObjectURL(curUrl); curUrl=null; } const it=playlist[curIdx]; curUrl=URL.createObjectURL(it.file); media.src=curUrl; media.classList.toggle('active',it.type.startsWith('video/')); trackSt.textContent='Loading...'; trackTi.textContent=it.name; trackAr.textContent=it.type.startsWith('video/')?'Video File':'Audio File'; trackEx.textContent=`Format: ${it.type}`; updateMS(it.name, trackAr.textContent); readMeta(it.file); wavesurfer.load(curUrl); media.playbackRate=parseFloat(speedS.value); try{ await media.play(); playing=true; } catch(e){ console.warn('Autoplay blocked'); trackSt.textContent='Autoplay Blocked - Click Play'; playing=false; } updPlUI(); }
     function stopPlay(){ media.pause(); media.currentTime=0; playing=false; playBtn.innerHTML='<i class="fas fa-play"></i>'; trackSt.textContent='Stopped'; radioMode=false; speedS.disabled=false; if(hls){ hls.destroy(); hls=null; } if(streamAbort){ streamAbort.abort(); streamAbort=null; } }
 
     // ========== PERBAIKAN UTAMA: playStream stabil ==========
@@ -663,7 +698,7 @@
       media.pause();
       media.removeAttribute('src');
       media.load();
-      media.crossOrigin = null;
+      media.crossOrigin = "anonymous";
       media.classList.remove('active');
 
       trackSt.textContent = 'Buffering...';
@@ -679,7 +714,7 @@
       try {
         if (url.endsWith('.m3u8') || url.includes('m3u8')) {
           if (Hls.isSupported()) {
-            hls = new Hls({ lowLatencyMode: false });
+            hls = new Hls({ lowLatencyMode: false, maxBufferLength: 30, maxMaxBufferLength: 60, enableWorker: true });
             hls.loadSource(url);
             hls.attachMedia(media);
             
@@ -730,7 +765,7 @@
       } catch (err) {
         if (err.message === 'Aborted') return;
         console.error('Stream error:', err);
-        trackSt.textContent = 'Stream Error';
+        trackSt.textContent = 'Stream Error - Check Network';
         trackAr.textContent = 'Gagal memutar channel';
         playBtn.innerHTML = '<i class="fas fa-play"></i>';
         radioMode = false;
